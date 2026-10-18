@@ -1,0 +1,14 @@
+model Category {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  description  String?
+  slaHours     Int      @default(72)
+  departmentId String   @db.Uuid
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  complaints Complaint[]
+
+  @@map("categories")
+}

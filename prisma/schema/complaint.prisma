@@ -1,0 +1,41 @@
+model Complaint {
+  id           String          @id @default(uuid()) @db.Uuid
+  trackingCode String          @unique @default(cuid())
+  title        String
+  description  String
+  address      String
+  latitude     Float?
+  longitude    Float?
+  status       ComplaintStatus @default(SUBMITTED)
+  priority     Priority        @default(MEDIUM)
+  slaDueAt     DateTime?
+  resolvedAt   DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  citizenId    String          @db.Uuid
+  departmentId String          @db.Uuid
+  categoryId   String          @db.Uuid
+
+  citizen User @relation("CitizenComplaints", fields: [citizenId], references: [id], onDelete: Restrict)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  updates     ComplaintUpdate[]
+
+  @@map("complaints")
+}
+
+model ComplaintUpdate {
+  id          String          @id @default(uuid()) @db.Uuid
+  complaintId String          @db.Uuid
+  status      ComplaintStatus
+  comment     String?
+  createdBy   String          @db.Uuid
+  createdAt   DateTime        @default(now())
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  updater   User     @relation("ComplaintUpdates", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@map("complaint_updates")
+}
