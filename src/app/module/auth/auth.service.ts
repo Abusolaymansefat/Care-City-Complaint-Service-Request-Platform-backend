@@ -4,7 +4,11 @@ import ejs from "ejs";
 import httpStatus from "http-status";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
 import path from "path";
-import { Role, UserStatus } from "../../../generated/prisma/enums";
+import {
+	AuthProvider,
+	Role,
+	UserStatus,
+} from "../../../generated/prisma/enums";
 import config from "../../config";
 import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
@@ -12,10 +16,15 @@ import { redisClient } from "../../lib/redis";
 import { AppError } from "../../utils/appError";
 import { jwtUtils } from "../../utils/jwt";
 import type {
+	IForgotPasswordPayload,
+	IGoogleLoginPayload,
 	ILoginPayload,
 	IRegisterPayload,
+	IResetPasswordPayload,
 	IVerifyEmailPayload,
 } from "./auth.interface";
+import { TokenPayload } from "google-auth-library";
+import { googleClient } from "../../lib/googleAuth";
 
 const register = async (payload: IRegisterPayload) => {
 	const { name, password } = payload;
@@ -371,9 +380,310 @@ const refreshToken = async (token: string) => {
 	};
 };
 
-const googleLogin = async () => {};
-const forgotPassword = async () => {};
-const resetPassword = async () => {};
+const googleLogin = async (payload: IGoogleLoginPayload) => {
+	let googlePayload: TokenPayload | undefined;
+
+	try {
+		const ticket = await googleClient.verifyIdToken({
+			idToken: payload.idToken,
+			audience: config.google_client_id,
+		});
+
+		googlePayload = ticket.getPayload();
+	} catch {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Invalid or expired Google ID token",
+		);
+	}
+
+	if (!googlePayload) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "Invalid Google ID token");
+	}
+
+	if (!googlePayload?.sub || !googlePayload.email) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Google account information is missing",
+		);
+	}
+
+	if (!googlePayload.email_verified) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"Google account is not verified",
+		);
+	}
+
+	const email = googlePayload.email.toLowerCase();
+	const googleId = googlePayload.sub;
+	const name = googlePayload.name || email.split("@")[0] || email;
+
+	let user = await prisma.user.findFirst({
+		where: {
+			email,
+			googleId,
+		},
+	});
+
+	if (!user) {
+		const existingUser = await prisma.user.findFirst({
+			where: {
+				email,
+			},
+		});
+
+		if (existingUser) {
+			if (existingUser.isDeleted) {
+				throw new AppError(httpStatus.FORBIDDEN, "Account is deleted");
+			}
+
+			if (existingUser.status !== UserStatus.ACTIVE) {
+				throw new AppError(httpStatus.FORBIDDEN, "Account is inactive");
+			}
+
+			if (!existingUser.emailVerified) {
+				throw new AppError(
+					httpStatus.FORBIDDEN,
+					"Please verify your email first",
+				);
+			}
+
+			if (existingUser.googleId && existingUser.googleId !== googleId) {
+				throw new AppError(
+					httpStatus.CONFLICT,
+					"This email is linked to another Google account",
+				);
+			}
+
+			user = await prisma.user.update({
+				where: {
+					id: existingUser.id,
+				},
+				data: {
+					googleId,
+				},
+			});
+		} else {
+			user = await prisma.user.create({
+				data: {
+					name,
+					email,
+					googleId,
+					authProvider: AuthProvider.GOOGLE,
+					emailVerified: true,
+					role: Role.CITIZEN,
+					status: UserStatus.ACTIVE,
+				},
+			});
+		}
+	}
+
+	if (user.isDeleted) {
+		throw new AppError(httpStatus.FORBIDDEN, "Account is deleted");
+	}
+
+	if (user.status !== UserStatus.ACTIVE) {
+		throw new AppError(httpStatus.FORBIDDEN, "Account is inactive");
+	}
+
+	const jwtPayload = {
+		userId: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
+	};
+
+	const accessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret,
+		config.jwt_access_expires_in as SignOptions,
+	);
+
+	const refreshToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_refresh_secret,
+		config.jwt_refresh_expires_in as SignOptions,
+	);
+
+	const { password: _password, ...safeUser } = user;
+
+	return {
+		accessToken,
+		refreshToken,
+		user: safeUser,
+	};
+};
+
+const forgotPassword = async (payload: IForgotPasswordPayload) => {
+	const email = payload.email.toLowerCase().trim();
+
+	// 1. Find user
+	const user = await prisma.user.findUnique({
+		where: { email },
+	});
+
+	if (!user) {
+		throw new AppError(httpStatus.NOT_FOUND, "User not found");
+	}
+
+	// 2. Check account status
+	if (user.isDeleted) {
+		throw new AppError(httpStatus.FORBIDDEN, "Account is deleted");
+	}
+
+	if (user.status !== UserStatus.ACTIVE) {
+		throw new AppError(httpStatus.FORBIDDEN, "Account is inactive");
+	}
+
+	if (!user.emailVerified) {
+		throw new AppError(httpStatus.FORBIDDEN, "Email is not verified");
+	}
+
+	// 3. Google-only accounts cannot reset a password this way
+	if (user.authProvider === AuthProvider.GOOGLE && !user.password) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"This account uses Google login. Please sign in with Google.",
+		);
+	}
+
+	// 4. Generate OTP
+	const otp = crypto.randomInt(100000, 1000000).toString();
+	const key = `forgot-password-otp:${email}`;
+	const expirationTime = 5 * 60;
+
+	// 5. Store OTP in Redis for 5 minutes
+	await redisClient.set(key, otp, {
+		expiration: {
+			type: "EX",
+			value: expirationTime,
+		},
+	});
+
+	// 6. Render email template
+	const templatePath = path.join(
+		process.cwd(),
+		"src/app/templates/forgot-password.ejs",
+	);
+
+	const html = await ejs.renderFile(templatePath, {
+		name: user.name,
+		otp,
+		expirationTime: expirationTime / 60,
+	});
+
+	// 7. Send OTP email
+	await transporter.sendMail({
+		from: config.email_sender,
+		to: user.email,
+		subject: "CityCare - Password Reset OTP",
+		html,
+	});
+
+	return {
+		message: "Password reset OTP sent successfully",
+	};
+};
+
+const resetPassword = async (payload: IResetPasswordPayload) => {
+	const { email, otp, newPassword } = payload;
+	const normalizedEmail = email.toLowerCase().trim();
+
+	// 1. Find user
+	const user = await prisma.user.findUnique({
+		where: {
+			email: normalizedEmail,
+		},
+	});
+
+	if (!user) {
+		throw new AppError(httpStatus.NOT_FOUND, "User not found");
+	}
+
+	// 2. Check account status
+	if (user.isDeleted) {
+		throw new AppError(httpStatus.FORBIDDEN, "Account is deleted");
+	}
+
+	if (user.status !== UserStatus.ACTIVE) {
+		throw new AppError(httpStatus.FORBIDDEN, "Account is inactive");
+	}
+
+	if (!user.emailVerified) {
+		throw new AppError(httpStatus.FORBIDDEN, "Email is not verified");
+	}
+
+	// 3. Prevent password reset for Google-only accounts
+	if (user.authProvider === AuthProvider.GOOGLE && !user.password) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"This account uses Google login. Please sign in with Google.",
+		);
+	}
+
+	// 4. Validate OTP
+	const key = `forgot-password-otp:${normalizedEmail}`;
+	const redisOtp = await redisClient.get(key);
+
+	if (!redisOtp) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"OTP expired. Please request a new OTP.",
+		);
+	}
+
+	if (redisOtp !== otp.trim()) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Invalid OTP");
+	}
+
+	// 5. Hash the new password
+	const hashedPassword = await bcrypt.hash(
+		newPassword,
+		Number(config.bcrypt_salt_rounds),
+	);
+
+	// 6. Update password
+	await prisma.user.update({
+		where: {
+			id: user.id,
+		},
+		data: {
+			password: hashedPassword,
+			needPasswordChange: false,
+		},
+	});
+
+	// 7. Delete OTP after successful password update
+	await redisClient.del([key]);
+
+	// 8. Render success email
+	const templatePath = path.join(
+		process.cwd(),
+		"src/app/templates/reset-password-success.ejs",
+	);
+
+	const html = await ejs.renderFile(templatePath, {
+		user: {
+			name: user.name,
+		},
+		change_date: new Date().toLocaleString(),
+		login_url: config.frontend_url ?? "#",
+		support_url: config.frontend_url ?? "#",
+	});
+
+	// 9. Send confirmation email
+	await transporter.sendMail({
+		from: config.email_sender,
+		to: user.email,
+		subject: "CityCare - Password Changed Successfully",
+		html,
+	});
+
+	return {
+		message: "Password reset successfully",
+	};
+};
 
 export const AuthService = {
 	register,
@@ -382,4 +692,6 @@ export const AuthService = {
 	getMe,
 	refreshToken,
 	googleLogin,
+	forgotPassword,
+	resetPassword,
 };

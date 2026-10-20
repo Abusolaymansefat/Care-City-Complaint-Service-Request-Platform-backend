@@ -25,4 +25,5 @@ export default {
 	smtp_user: process.env.SMTP_USER!,
 	email_sender: process.env.EMAIL_SENDER!,
 	smtp_password: process.env.SMTP_PASSWORD!,
+	google_client_id: process.env.GOOGLE_CLIENT_ID!,
 };
