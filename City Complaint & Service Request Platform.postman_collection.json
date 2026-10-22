@@ -110,7 +110,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"email\": \"abusolayman01@gmail.com\",\r\n    \"password\": \"Password123@@\"\r\n}\r\n",
+              "raw": "{\r\n    \"email\": \"abusolayman01@gmail.com\",\r\n    \"password\": \"Password123@\"\r\n}\r\n",
               "options": {
                 "raw": {
                   "language": "json"
