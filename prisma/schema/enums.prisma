@@ -40,5 +40,3 @@ enum DepartmentStatus {
   ACTIVE
   INACTIVE
 }
-
-

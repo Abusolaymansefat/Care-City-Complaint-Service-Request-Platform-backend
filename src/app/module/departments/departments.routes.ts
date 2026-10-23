@@ -7,22 +7,29 @@ import { DepartmentsValidation } from "./departments.validation";
 
 const router = Router();
 
-router.post(
-	"/department",
-	validateRequest(DepartmentsValidation.createDepartmentSchema),
-	DepartmentsController.createDepartment,
-);
+// Public: list departments
 router.get(
 	"/",
 	validateRequest(DepartmentsValidation.departmentQuerySchema, "query"),
 	DepartmentsController.getDepartments,
 );
+
+// Public: get department by ID
 router.get(
 	"/:id",
 	validateRequest(DepartmentsValidation.departmentIdParamSchema, "params"),
 	DepartmentsController.getDepartmentById,
 );
 
+// Admin only: create department
+router.post(
+	"/",
+	auth(Role.ADMIN),
+	validateRequest(DepartmentsValidation.createDepartmentSchema),
+	DepartmentsController.createDepartment,
+);
+
+// Admin only: update department
 router.patch(
 	"/:id",
 	auth(Role.ADMIN),
@@ -30,6 +37,8 @@ router.patch(
 	validateRequest(DepartmentsValidation.updateDepartmentSchema),
 	DepartmentsController.updateDepartment,
 );
+
+// Admin only: delete department
 router.delete(
 	"/:id",
 	auth(Role.ADMIN),

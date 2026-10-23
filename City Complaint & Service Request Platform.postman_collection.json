@@ -8,6 +8,42 @@
   },
   "item": [
     {
+      "name": "departments",
+      "item": [
+        {
+          "name": "New Request",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Waste Management\",\r\n  \"description\": \"Handles waste collection and sanitation services.\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/v1/departments/department",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "departments",
+                "department"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "auth",
       "item": [
         {
@@ -135,6 +171,28 @@
           "response": []
         },
         {
+          "name": "google-login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/api/v1/auth/google-login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "google-login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "forgot-password",
           "request": {
             "method": "POST",
@@ -221,26 +279,43 @@
       ]
     },
     {
-      "name": "google-login",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:5000/api/v1/auth/google-login",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "5000",
-          "path": [
-            "api",
-            "v1",
-            "auth",
-            "google-login"
-          ]
+      "name": "upload image",
+      "item": [
+        {
+          "name": "upload-profile-image",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "profileImage",
+                  "type": "file",
+                  "src": [
+                    "/C:/Users/DELL/Downloads/shoe.jpg"
+                  ]
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/v1/user/upload-profile-image",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "upload-profile-image"
+              ]
+            }
+          },
+          "response": []
         }
-      },
-      "response": []
+      ]
     }
   ]
 }
