@@ -6,6 +6,8 @@ import config from "./app/config";
 import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
 import { AuthRoutes } from "./app/module/auth/auth.routes";
+import { UserRoutes } from "./app/module/user/user.route";
+import { DepartmentsRoutes } from "./app/module/departments/departments.routes";
 
 const app: Application = express();
 
@@ -25,6 +27,8 @@ app.use(cookieParser());
 
 // Auth router
 app.use("/api/v1/auth", AuthRoutes);
+app.use("/api/v1/user", UserRoutes);
+app.use("/api/v1/departments", DepartmentsRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {
