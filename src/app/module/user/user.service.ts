@@ -1,8 +1,8 @@
-import httpStatus from "http-status";
-import { prisma } from "../../lib/prisma";
 import { UploadApiResponse } from "cloudinary";
-import { cloudinary } from "../../lib/cloudinary";
+import httpStatus from "http-status";
 import { UserStatus } from "../../../generated/prisma/enums";
+import { cloudinary } from "../../lib/cloudinary";
+import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 
 const uploadProfileImage = async (buffer: Buffer, userId: string) => {
