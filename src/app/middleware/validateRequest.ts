@@ -4,10 +4,20 @@ import z from "zod";
 import { AppError } from "../utils/appError";
 import { catchAsync } from "../utils/catchAsync";
 
-export const validateRequest = (zodSchema: z.ZodObject) => {
+type RequestPart = "body" | "params" | "query";
+
+export const validateRequest = (
+	zodSchema: z.ZodObject,
+	requestPart: RequestPart = "body",
+) => {
 	return catchAsync((req: Request, res: Response, next: NextFunction) => {
 		try {
-			const payload = req.body ?? {};
+			const payload =
+				requestPart === "body"
+					? (req.body ?? {})
+					: requestPart === "params"
+						? req.params
+						: req.query;
 
 			const result = zodSchema.safeParse(payload);
 
@@ -18,7 +28,9 @@ export const validateRequest = (zodSchema: z.ZodObject) => {
 				);
 			}
 
-			req.body = result.data;
+			if (requestPart === "body") {
+				req.body = result.data;
+			}
 
 			next();
 		} catch (error) {

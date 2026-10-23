@@ -39,6 +39,8 @@ const departmentQuerySchema = z.object({
 	searchTerm: z.string().trim().optional(),
 	page: z.coerce.number().int().min(1).default(1),
 	limit: z.coerce.number().int().min(1).max(100).default(10),
+	sortBy: z.enum(["name", "isActive", "createdAt", "updatedAt"]).optional(),
+	sortOrder: z.enum(["asc", "desc"]).optional(),
 });
 
 export const DepartmentsValidation = {

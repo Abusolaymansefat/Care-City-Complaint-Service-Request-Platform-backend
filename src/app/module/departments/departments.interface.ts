@@ -16,4 +16,6 @@ export interface IDepartmentQuery {
 	searchTerm?: string;
 	page?: number;
 	limit?: number;
+	sortBy?: "name" | "isActive" | "createdAt" | "updatedAt";
+	sortOrder?: "asc" | "desc";
 }
