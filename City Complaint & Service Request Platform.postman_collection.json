@@ -11,13 +11,13 @@
       "name": "departments",
       "item": [
         {
-          "name": "New Request",
+          "name": "create Department",
           "request": {
             "method": "POST",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"name\": \"Waste Management\",\r\n  \"description\": \"Handles waste collection and sanitation services.\"\r\n}",
+              "raw": "{\r\n  \"name\": \"Waste Management 2 \",\r\n  \"description\": \"Handles waste collection and sanitation services.Handles waste collection and sanitation services.Handles waste collection and sanitation services.\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -25,7 +25,7 @@
               }
             },
             "url": {
-              "raw": "http://localhost:5000/api/v1/departments/department",
+              "raw": "http://localhost:5000/api/v1/departments/create-department",
               "protocol": "http",
               "host": [
                 "localhost"
@@ -35,7 +35,7 @@
                 "api",
                 "v1",
                 "departments",
-                "department"
+                "create-department"
               ]
             }
           },
@@ -146,7 +146,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"email\": \"abusolayman01@gmail.com\",\r\n    \"password\": \"Password123@\"\r\n}\r\n",
+              "raw": "{\r\n    \"email\": \"testeradmin@gmail.com\",\r\n    \"password\": \"Testeradmin@12345\"\r\n}\r\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -310,6 +310,83 @@
                 "v1",
                 "user",
                 "upload-profile-image"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "categories",
+      "item": [
+        {
+          "name": "create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"name\": \"Waste Management\",\r\n  \"description\": \"Garbage collection and sanitation complaints\",\r\n  \"slaHours\": 48,\r\n  \"departmentId\": \"fd70f613-1f0f-4904-9131-35efd3918049\"\r\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/v1/categories/create-category",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "categories",
+                "create-category"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "complaints",
+      "item": [
+        {
+          "name": "create Complaint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"title\": \"Garbage has not been collected\",\r\n    \"description\": \"Garbage has accumulated near our residential building.\",\r\n    \"address\": \"Road 5, Dhaka, Bangladesh\",\r\n    \"latitude\": 23.7806,\r\n    \"longitude\": 90.407,\r\n    \"categoryId\": \"c0e245da-4b75-4538-addc-e71ece48866f\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/v1/complaints/create-complaint",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5000",
+              "path": [
+                "api",
+                "v1",
+                "complaints",
+                "create-complaint"
               ]
             }
           },

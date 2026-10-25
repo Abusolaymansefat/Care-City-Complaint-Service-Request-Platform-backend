@@ -1,0 +1,29 @@
+model Payment {
+  id          String @id @default(uuid()) @db.Uuid
+  userId      String @db.Uuid
+  complaintId String @db.Uuid
+
+  provider PaymentProvider @default(BKASH)
+  status   PaymentStatus   @default(PENDING)
+
+  amount   Decimal @db.Decimal(10, 2)
+  currency String  @default("BDT")
+
+  invoiceNumber  String  @unique
+  bkashPaymentId String? @unique
+  transactionId  String? @unique
+  paymentUrl     String?
+
+  paidAt        DateTime?
+  failureReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+
+  @@index([userId, status])
+  @@index([complaintId, createdAt])
+  @@map("payments")
+}

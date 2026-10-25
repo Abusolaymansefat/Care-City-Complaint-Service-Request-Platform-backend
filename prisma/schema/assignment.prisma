@@ -1,0 +1,25 @@
+model Assignment {
+  id           String @id @default(uuid()) @db.Uuid
+  complaintId  String @db.Uuid
+  technicianId String @db.Uuid
+  assignedById String @db.Uuid
+
+  status AssignmentStatus @default(ASSIGNED)
+  notes  String?
+
+  assignedAt  DateTime  @default(now())
+  acceptedAt  DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  complaint  Complaint @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  technician User      @relation("TechnicianAssignments", fields: [technicianId], references: [id], onDelete: Restrict)
+  assignedBy User      @relation("AssignmentCreators", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  @@index([technicianId, status])
+  @@index([complaintId, createdAt])
+  @@index([assignedById])
+  @@map("assignments")
+}

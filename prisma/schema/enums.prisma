@@ -40,3 +40,29 @@ enum DepartmentStatus {
   ACTIVE
   INACTIVE
 }
+
+enum AssignmentStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+enum FeedbackStatus {
+  VISIBLE
+  HIDDEN
+  DELETED
+}
+
+enum PaymentProvider {
+  BKASH
+}
+
+enum PaymentStatus {
+  PENDING
+  INITIATED
+  PAID
+  FAILED
+  CANCELLED
+}

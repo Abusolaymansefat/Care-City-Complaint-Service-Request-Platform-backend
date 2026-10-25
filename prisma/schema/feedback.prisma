@@ -1,0 +1,19 @@
+model Feedback {
+  id          String @id @default(uuid()) @db.Uuid
+  complaintId String @unique @db.Uuid
+  citizenId   String @db.Uuid
+
+  rating  Int
+  comment String?
+  status  FeedbackStatus @default(VISIBLE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Restrict)
+  citizen   User      @relation("CitizenFeedback", fields: [citizenId], references: [id], onDelete: Restrict)
+
+  @@index([citizenId, createdAt])
+  @@index([status, createdAt])
+  @@map("feedback")
+}
