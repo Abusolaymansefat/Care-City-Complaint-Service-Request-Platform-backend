@@ -7,9 +7,9 @@ import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
 import { AuthRoutes } from "./app/module/auth/auth.routes";
 import { CategoriesRoutes } from "./app/module/categories/categories.routes";
+import { ComplaintsRoutes } from "./app/module/complaints/complaints.routes";
 import { DepartmentsRoutes } from "./app/module/departments/departments.routes";
 import { UserRoutes } from "./app/module/user/user.route";
-import { ComplaintsRoutes } from "./app/module/complaints/complaints.routes";
 
 const app: Application = express();
 
@@ -32,7 +32,7 @@ app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/user", UserRoutes);
 app.use("/api/v1/departments", DepartmentsRoutes);
 app.use("/api/v1/categories", CategoriesRoutes);
-app.use("/api/v1/complaints", ComplaintsRoutes;
+app.use("/api/v1/complaints", ComplaintsRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {

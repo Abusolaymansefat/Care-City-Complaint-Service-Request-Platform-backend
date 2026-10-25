@@ -5,6 +5,7 @@ import { AppError } from "../../utils/appError";
 import {
 	ICreateDepartmentPayload,
 	IDepartmentQuery,
+	IUpdateDepartmentPayload,
 } from "./departments.interface";
 
 const createDepartment = async (payload: ICreateDepartmentPayload) => {
@@ -31,6 +32,7 @@ const createDepartment = async (payload: ICreateDepartmentPayload) => {
 		const newDepartment = await prisma.department.create({
 			data: {
 				name,
+				description: payload.description?.trim() || null,
 			},
 		});
 
@@ -97,36 +99,41 @@ const getDepartmentById = async (id: string) => {
 
 const updateDepartment = async (
 	id: string,
-	payload: ICreateDepartmentPayload,
+	payload: IUpdateDepartmentPayload,
 ) => {
-	const name = payload.name.trim();
+	const data: Prisma.DepartmentUpdateInput = {};
 
-	if (!name) {
-		throw new AppError(httpStatus.BAD_REQUEST, "Name is required");
+	if (payload.name !== undefined) {
+		const name = payload.name.trim();
+		if (!name) {
+			throw new AppError(httpStatus.BAD_REQUEST, "Name is required");
+		}
+
+		const existingDepartment = await prisma.department.findFirst({
+			where: {
+				id: { not: id },
+				name: {
+					equals: name,
+					mode: "insensitive",
+				},
+			},
+		});
+
+		if (existingDepartment) {
+			throw new AppError(httpStatus.BAD_REQUEST, "Department already exists");
+		}
+
+		data.name = name;
 	}
 
-	const existingDepartment = await prisma.department.findFirst({
-		where: {
-			id,
-			name: {
-				equals: name,
-				mode: "insensitive",
-			},
-		},
-	});
-
-	if (existingDepartment) {
-		throw new AppError(httpStatus.BAD_REQUEST, "Department already exists");
+	if (payload.description !== undefined) {
+		data.description = payload.description.trim() || null;
 	}
 
 	try {
 		const updatedDepartment = await prisma.department.update({
-			where: {
-				id,
-			},
-			data: {
-				name,
-			},
+			where: { id },
+			data,
 		});
 
 		return updatedDepartment;

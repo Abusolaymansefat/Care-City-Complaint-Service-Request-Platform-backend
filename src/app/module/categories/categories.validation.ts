@@ -3,10 +3,16 @@ import z from "zod";
 const uuidSchema = z.string().uuid("Invalid UUID");
 
 const createCategorySchema = z.object({
-	name: z.string().trim().min(2).max(100),
+	name: z
+		.string({ error: "Category name is required" })
+		.trim()
+		.min(2, "Category name must be at least 2 characters")
+		.max(100, "Category name cannot exceed 100 characters"),
 	description: z.string().trim().max(500).optional(),
 	slaHours: z.number().int().min(1).max(8760).optional(),
-	departmentId: uuidSchema,
+	departmentId: z
+		.string({ error: "Department ID is required" })
+		.uuid("Department ID must be a valid UUID"),
 });
 
 const updateCategorySchema = z

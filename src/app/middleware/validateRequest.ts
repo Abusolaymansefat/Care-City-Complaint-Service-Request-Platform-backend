@@ -19,12 +19,28 @@ export const validateRequest = (
 						? req.params
 						: req.query;
 
+			if (
+				requestPart === "body" &&
+				typeof payload === "object" &&
+				payload !== null &&
+				Object.keys(payload).length === 0
+			) {
+				throw new AppError(
+					httpStatus.BAD_REQUEST,
+					"Request body is empty. Send a JSON body with Content-Type: application/json",
+				);
+			}
+
 			const result = zodSchema.safeParse(payload);
 
 			if (!result.success) {
+				const issue = result.error.issues[0];
+				const field = issue?.path.join(".");
 				throw new AppError(
 					httpStatus.BAD_REQUEST,
-					result.error.issues[0]?.message ?? "Invalid request payload",
+					issue
+						? `${field ? `${field}: ` : ""}${issue.message}`
+						: "Invalid request payload",
 				);
 			}
 

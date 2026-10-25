@@ -29,4 +29,13 @@ export default {
 	cloudinary_cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
 	cloudinary_api_key: process.env.CLOUDINARY_API_KEY!,
 	cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET!,
+	admin_name: process.env.ADMIN_NAME!,
+	admin_email: process.env.ADMIN_EMAIL!,
+	admin_password: process.env.ADMIN_PASSWORD!,
+	technician_name: process.env.TECHNICIAN_NAME!,
+	technician_email: process.env.TECHNICIAN_EMAIL!,
+	technician_password: process.env.TECHNICIAN_PASSWORD!,
+	department_officer_name: process.env.DEPARTMENT_OFFICER_NAME!,
+	department_officer_email: process.env.DEPARTMENT_OFFICER_EMAIL!,
+	department_officer_password: process.env.DEPARTMENT_OFFICER_PASSWORD!,
 };

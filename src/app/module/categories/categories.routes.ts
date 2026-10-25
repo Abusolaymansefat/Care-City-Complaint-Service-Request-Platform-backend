@@ -7,27 +7,27 @@ import { CategoriesValidation } from "./categories.validation";
 
 const router = Router();
 
-router.get(
-	"/",
-	validateRequest(CategoriesValidation.categoryQuerySchema, "query"),
-	CategoriesController.getCategories,
-);
-
-router.get(
-	"/:id",
-	validateRequest(CategoriesValidation.categoryIdParamSchema, "params"),
-	CategoriesController.getCategoryById,
-);
-
 router.post(
-	"/",
+	"/create-category",
 	auth(Role.ADMIN),
 	validateRequest(CategoriesValidation.createCategorySchema),
 	CategoriesController.createCategory,
 );
 
+router.get(
+	"/get-categories",
+	auth(Role.ADMIN),
+	validateRequest(CategoriesValidation.categoryQuerySchema, "query"),
+	CategoriesController.getCategories,
+);
+router.get(
+	"/get-category/:id",
+	validateRequest(CategoriesValidation.categoryIdParamSchema, "params"),
+	CategoriesController.getCategoryById,
+);
+
 router.patch(
-	"/:id",
+	"/update-category/:id",
 	auth(Role.ADMIN),
 	validateRequest(CategoriesValidation.categoryIdParamSchema, "params"),
 	validateRequest(CategoriesValidation.updateCategorySchema),
@@ -35,7 +35,7 @@ router.patch(
 );
 
 router.delete(
-	"/:id",
+	"/delete-category/:id",
 	auth(Role.ADMIN),
 	validateRequest(CategoriesValidation.categoryIdParamSchema, "params"),
 	CategoriesController.deleteCategory,

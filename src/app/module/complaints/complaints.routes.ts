@@ -9,7 +9,7 @@ const router = Router();
 
 router.post(
 	"/create-complaint",
-	auth(Role.CITIZEN),
+	auth(Role.CITIZEN, Role.DEPARTMENT_OFFICER, Role.TECHNICIAN, Role.ADMIN),
 	validateRequest(ComplaintsValidation.createComplaintSchema),
 	ComplaintsController.createComplaint,
 );
