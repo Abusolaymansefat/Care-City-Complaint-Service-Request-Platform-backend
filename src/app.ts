@@ -5,6 +5,7 @@ import httpStatus from "http-status";
 import config from "./app/config";
 import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
+import { AssignmentsRoutes } from "./app/module/assignments/assignments.routes";
 import { AuthRoutes } from "./app/module/auth/auth.routes";
 import { CategoriesRoutes } from "./app/module/categories/categories.routes";
 import { ComplaintsRoutes } from "./app/module/complaints/complaints.routes";
@@ -33,6 +34,7 @@ app.use("/api/v1/user", UserRoutes);
 app.use("/api/v1/departments", DepartmentsRoutes);
 app.use("/api/v1/categories", CategoriesRoutes);
 app.use("/api/v1/complaints", ComplaintsRoutes);
+app.use("/api/v1/assignments", AssignmentsRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {
