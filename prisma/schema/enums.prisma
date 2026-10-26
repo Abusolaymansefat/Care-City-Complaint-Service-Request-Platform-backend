@@ -66,3 +66,8 @@ enum PaymentStatus {
   FAILED
   CANCELLED
 }
+
+enum PaymentTiming {
+  AFTER_SUBMISSION
+  AFTER_COMPLETION
+}

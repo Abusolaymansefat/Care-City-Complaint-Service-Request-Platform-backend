@@ -5,6 +5,7 @@ model Payment {
 
   provider PaymentProvider @default(BKASH)
   status   PaymentStatus   @default(PENDING)
+  timing   PaymentTiming   @default(AFTER_SUBMISSION)
 
   amount   Decimal @db.Decimal(10, 2)
   currency String  @default("BDT")

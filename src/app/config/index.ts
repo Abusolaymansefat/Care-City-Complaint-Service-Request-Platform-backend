@@ -38,4 +38,10 @@ export default {
 	department_officer_name: process.env.DEPARTMENT_OFFICER_NAME!,
 	department_officer_email: process.env.DEPARTMENT_OFFICER_EMAIL!,
 	department_officer_password: process.env.DEPARTMENT_OFFICER_PASSWORD!,
+	bkash_base_url: process.env.BKASH_BASE_URL!,
+	bkash_username: process.env.BKASH_USERNAME!,
+	bkash_password: process.env.BKASH_PASSWORD!,
+	bkash_app_key: process.env.BKASH_APP_KEY!,
+	bkash_app_secret: process.env.BKASH_APP_SECRET!,
+	bkash_callback_url: process.env.BKASH_CALLBACK_URL!,
 };

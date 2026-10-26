@@ -7,8 +7,9 @@ model Complaint {
   latitude     Float?
   longitude    Float?
 
-  status   ComplaintStatus @default(SUBMITTED)
-  priority Priority        @default(MEDIUM)
+  status          ComplaintStatus @default(SUBMITTED)
+  priority        Priority        @default(MEDIUM)
+  paymentRequired Boolean         @default(false)
 
   slaDueAt   DateTime?
   resolvedAt DateTime?
@@ -33,6 +34,7 @@ model Complaint {
   @@index([departmentId, status])
   @@index([categoryId])
   @@index([status, priority])
+  @@index([citizenId, paymentRequired])
   @@map("complaints")
 }
 
