@@ -6,6 +6,7 @@ import {
 } from "../../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
+import { FREE_COMPLAINT_LIMIT } from "../payments/payments.constants";
 import {
 	IComplaintQuery,
 	ICreateComplaintPayload,
@@ -48,6 +49,22 @@ const complaintInclude = {
 			},
 		},
 	},
+	payments: {
+		orderBy: {
+			createdAt: "desc" as const,
+		},
+		take: 5,
+		select: {
+			id: true,
+			status: true,
+			amount: true,
+			currency: true,
+			invoiceNumber: true,
+			paymentUrl: true,
+			paidAt: true,
+			createdAt: true,
+		},
+	},
 };
 
 const createComplaint = async (
@@ -76,6 +93,10 @@ const createComplaint = async (
 
 	const slaDueAt = new Date(Date.now() + categorie.slaHours * 60 * 60 * 1000);
 
+	const previousComplaintCount = await prisma.complaint.count({
+		where: { citizenId },
+	});
+
 	return prisma.complaint.create({
 		data: {
 			title: payload.title.trim(),
@@ -87,6 +108,7 @@ const createComplaint = async (
 			categoryId: categorie.id,
 			departmentId: categorie.departmentId,
 			slaDueAt,
+			paymentRequired: previousComplaintCount >= FREE_COMPLAINT_LIMIT,
 		},
 		include: complaintInclude,
 	});

@@ -17,21 +17,21 @@ router.post(
 router.get(
 	"/get-my-complaints",
 	auth(Role.CITIZEN),
-	validateRequest(ComplaintsValidation.complaintQuerySchema),
+	validateRequest(ComplaintsValidation.complaintQuerySchema, "query"),
 	ComplaintsController.getMyComplaints,
 );
 
 router.get(
 	"/get-complaints",
 	auth(Role.ADMIN, Role.TECHNICIAN, Role.DEPARTMENT_OFFICER),
-	validateRequest(ComplaintsValidation.complaintQuerySchema),
+	validateRequest(ComplaintsValidation.complaintQuerySchema, "query"),
 	ComplaintsController.getComplaints,
 );
 
 router.get(
 	"/get-complaint/:id",
-	auth(Role.ADMIN, Role.TECHNICIAN, Role.DEPARTMENT_OFFICER),
-	validateRequest(ComplaintsValidation.complaintIdParamSchema),
+	auth(Role.CITIZEN, Role.ADMIN, Role.TECHNICIAN, Role.DEPARTMENT_OFFICER),
+	validateRequest(ComplaintsValidation.complaintIdParamSchema, "params"),
 	ComplaintsController.getComplaintById,
 );
 

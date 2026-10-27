@@ -10,7 +10,7 @@ const router = Router();
 // Admin only: create department
 router.post(
 	"/create-department",
-	auth(Role.ADMIN),
+	auth(Role.ADMIN, Role.CITIZEN),
 	validateRequest(DepartmentsValidation.createDepartmentSchema),
 	DepartmentsController.createDepartment,
 );
