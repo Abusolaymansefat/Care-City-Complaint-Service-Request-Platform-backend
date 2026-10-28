@@ -32,7 +32,7 @@ router.get(
 // Admin only: update department
 router.patch(
 	"/update-department/:id",
-	auth(Role.ADMIN),
+	auth(Role.ADMIN, Role.CITIZEN),
 	validateRequest(DepartmentsValidation.departmentIdParamSchema, "params"),
 	validateRequest(DepartmentsValidation.updateDepartmentSchema),
 	DepartmentsController.updateDepartment,
@@ -41,7 +41,7 @@ router.patch(
 // Admin only: delete department
 router.delete(
 	"/delete-department/:id",
-	auth(Role.ADMIN),
+	auth(Role.ADMIN, Role.CITIZEN),
 	validateRequest(DepartmentsValidation.departmentIdParamSchema, "params"),
 	DepartmentsController.deleteDepartment,
 );
