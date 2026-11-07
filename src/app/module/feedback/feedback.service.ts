@@ -6,6 +6,7 @@ import {
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import type { ICreateFeedbackPayload } from "./feedback.interface";
+import { notificationService } from "../notification/notification.service";
 
 const createFeedback = async (
 	citizenId: string,
@@ -53,7 +54,7 @@ const createFeedback = async (
 		);
 	}
 
-	return prisma.feedback.create({
+	const feedback = await prisma.feedback.create({
 		data: {
 			complaintId: complaint.id,
 			citizenId,
@@ -71,6 +72,16 @@ const createFeedback = async (
 			},
 		},
 	});
+
+	await notificationService.createNotification({
+		userId: citizenId,
+		title: "Feedback received",
+		message: `Thank you for your ${payload.rating}-star feedback on complaint "${feedback.complaint.title}" (${feedback.complaint.trackingCode}).`,
+		type: "FEEDBACK_SUBMITTED",
+		link: `/complaints/${feedback.complaint.id}`,
+	});
+
+	return feedback;
 };
 
 const getFeedback = async (id: string) => {

@@ -7,6 +7,7 @@ import {
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import { FREE_COMPLAINT_LIMIT } from "../payments/payments.constants";
+import { notificationService } from "../notification/notification.service";
 import {
 	IComplaintQuery,
 	ICreateComplaintPayload,
@@ -97,21 +98,32 @@ const createComplaint = async (
 		where: { citizenId },
 	});
 
-	return prisma.complaint.create({
-		data: {
-			title: payload.title.trim(),
-			description: payload.description.trim(),
-			address: payload.address.trim(),
-			latitude: payload.latitude,
-			longitude: payload.longitude,
-			citizenId,
-			categoryId: categorie.id,
-			departmentId: categorie.departmentId,
-			slaDueAt,
-			paymentRequired: previousComplaintCount >= FREE_COMPLAINT_LIMIT,
-		},
-		include: complaintInclude,
-	});
+	return prisma.complaint
+		.create({
+			data: {
+				title: payload.title.trim(),
+				description: payload.description.trim(),
+				address: payload.address.trim(),
+				latitude: payload.latitude,
+				longitude: payload.longitude,
+				citizenId,
+				categoryId: categorie.id,
+				departmentId: categorie.departmentId,
+				slaDueAt,
+				paymentRequired: previousComplaintCount >= FREE_COMPLAINT_LIMIT,
+			},
+			include: complaintInclude,
+		})
+		.then(async (complaint) => {
+			await notificationService.createNotification({
+				userId: citizenId,
+				title: "Complaint submitted",
+				message: `Your complaint "${complaint.title}" (${complaint.trackingCode}) has been submitted successfully.`,
+				type: "COMPLAINT_CREATED",
+				link: `/complaints/${complaint.id}`,
+			});
+			return complaint;
+		});
 };
 
 const getMyComplaints = async (citizenId: string, query: IComplaintQuery) => {
@@ -379,8 +391,8 @@ const updateComplaintStatus = async (
 
 	const isResolved = payload.status === ComplaintStatus.RESOLVED;
 
-	return prisma.$transaction(async (tx) => {
-		const updatedComplaint = await tx.complaint.update({
+	const updatedComplaint = await prisma.$transaction(async (tx) => {
+		const result = await tx.complaint.update({
 			where: { id },
 			data: {
 				status: payload.status,
@@ -401,8 +413,18 @@ const updateComplaintStatus = async (
 			},
 		});
 
-		return updatedComplaint;
+		return result;
 	});
+
+	await notificationService.createNotification({
+		userId: updatedComplaint.citizenId,
+		title: "Complaint status updated",
+		message: `Your complaint "${updatedComplaint.title}" (${updatedComplaint.trackingCode}) is now ${updatedComplaint.status.replaceAll("_", " ").toLowerCase()}.`,
+		type: "COMPLAINT_STATUS_CHANGED",
+		link: `/complaints/${updatedComplaint.id}`,
+	});
+
+	return updatedComplaint;
 };
 
 export const complaintsService = {

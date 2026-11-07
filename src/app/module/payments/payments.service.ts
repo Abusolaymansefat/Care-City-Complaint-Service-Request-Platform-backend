@@ -12,6 +12,7 @@ import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import { COMPLAINT_FEE, FREE_COMPLAINT_LIMIT } from "./payments.constants";
 import type { IPaymentQuery } from "./payments.interface";
+import { notificationService } from "../notification/notification.service";
 
 type IBkashCreateResponse = {
 	statusCode?: string;
@@ -246,6 +247,14 @@ const initiatePayment = async (userId: string, complaintId: string) => {
 			}),
 		]);
 
+		await notificationService.createNotification({
+			userId,
+			title: "Payment initiated",
+			message: `A payment of ${COMPLAINT_FEE} BDT for invoice ${invoiceNumber} has been started. Complete it on bKash.`,
+			type: "PAYMENT_INITIATED",
+			link: `/payments/${updatedPayment.id}`,
+		});
+
 		return updatedPayment;
 	} catch (error) {
 		await prisma.payment.update({
@@ -334,6 +343,14 @@ const handleBkashCallback = async (paymentID: string, status: string) => {
 				data: { paymentRequired: false },
 			}),
 		]);
+
+		await notificationService.createNotification({
+			userId: payment.userId,
+			title: "Payment successful",
+			message: `Your payment of ${COMPLAINT_FEE} BDT (invoice ${payment.invoiceNumber}) was completed successfully.`,
+			type: "PAYMENT_PAID",
+			link: `/payments/${updatedPayment.id}`,
+		});
 
 		return updatedPayment;
 	} catch (error) {

@@ -12,6 +12,7 @@ import type {
 	ICreateAssignmentPayload,
 	IUpdateAssignmentStatusPayload,
 } from "./assignments.interface";
+import { notificationService } from "../notification/notification.service";
 
 const assignmentInclude = {
 	complaint: {
@@ -150,13 +151,13 @@ const createAssignment = async (
 
 	const notes = payload.notes?.trim() || null;
 
-	return prisma.$transaction(async (tx) => {
+	const assignment = await prisma.$transaction(async (tx) => {
 		await tx.complaint.update({
 			where: { id: complaint.id },
 			data: { status: ComplaintStatus.ASSIGNED },
 		});
 
-		const assignment = await tx.assignment.create({
+		const created = await tx.assignment.create({
 			data: {
 				complaintId: complaint.id,
 				technicianId: technician.id,
@@ -175,8 +176,18 @@ const createAssignment = async (
 			},
 		});
 
-		return assignment;
+		return created;
 	});
+
+	await notificationService.createNotification({
+		userId: technician.id,
+		title: "New assignment",
+		message: `You have been assigned to complaint "${assignment.complaint.title}" (${assignment.complaint.trackingCode}).`,
+		type: "ASSIGNMENT_CREATED",
+		link: `/complaints/${assignment.complaint.id}`,
+	});
+
+	return assignment;
 };
 
 const getAssignments = async (
@@ -291,7 +302,7 @@ const updateAssignmentStatus = async (
 				? ComplaintStatus.RESOLVED
 				: ComplaintStatus.UNDER_REVIEW;
 
-	return prisma.$transaction(async (tx) => {
+	const updatedAssignment = await prisma.$transaction(async (tx) => {
 		await tx.complaint.update({
 			where: { id: assignment.complaintId },
 			data: {
@@ -302,7 +313,7 @@ const updateAssignmentStatus = async (
 			},
 		});
 
-		const updatedAssignment = await tx.assignment.update({
+		const result = await tx.assignment.update({
 			where: { id: assignment.id },
 			data: {
 				status: payload.status,
@@ -328,8 +339,27 @@ const updateAssignmentStatus = async (
 			},
 		});
 
-		return updatedAssignment;
+		return result;
 	});
+
+	const citizenId = await prisma.complaint
+		.findUnique({
+			where: { id: assignment.complaintId },
+			select: { citizenId: true },
+		})
+		.then((c) => c?.citizenId);
+
+	if (citizenId) {
+		await notificationService.createNotification({
+			userId: citizenId,
+			title: "Complaint progress updated",
+			message: `Complaint "${updatedAssignment.complaint.title}" (${updatedAssignment.complaint.trackingCode}) is now ${complaintStatus.replaceAll("_", " ").toLowerCase()}.`,
+			type: "ASSIGNMENT_STATUS_CHANGED",
+			link: `/complaints/${updatedAssignment.complaint.id}`,
+		});
+	}
+
+	return updatedAssignment;
 };
 
 export const assignmentsService = {

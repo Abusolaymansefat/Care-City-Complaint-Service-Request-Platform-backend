@@ -13,6 +13,7 @@ import { DepartmentsRoutes } from "./app/module/departments/departments.routes";
 import { FeedbackRoutes } from "./app/module/feedback/feedback.routes";
 import { PaymentsRoutes } from "./app/module/payments/payments.routes";
 import { UserRoutes } from "./app/module/user/user.route";
+import { NotificationRoutes } from "./app/module/notification/notification.routes";
 
 const app: Application = express();
 
@@ -39,6 +40,7 @@ app.use("/api/v1/complaints", ComplaintsRoutes);
 app.use("/api/v1/assignments", AssignmentsRoutes);
 app.use("/api/v1/feedback", FeedbackRoutes);
 app.use("/api/v1/payments", PaymentsRoutes);
+app.use("/api/v1/notifications", NotificationRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {
