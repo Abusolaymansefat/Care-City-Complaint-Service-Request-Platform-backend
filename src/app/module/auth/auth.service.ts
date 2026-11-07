@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import ejs from "ejs";
+import { TokenPayload } from "google-auth-library";
 import httpStatus from "http-status";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
 import path from "path";
@@ -10,6 +11,7 @@ import {
 	UserStatus,
 } from "../../../generated/prisma/enums";
 import config from "../../config";
+import { googleClient } from "../../lib/googleAuth";
 import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
 import { redisClient } from "../../lib/redis";
@@ -23,8 +25,6 @@ import type {
 	IResetPasswordPayload,
 	IVerifyEmailPayload,
 } from "./auth.interface";
-import { TokenPayload } from "google-auth-library";
-import { googleClient } from "../../lib/googleAuth";
 
 const register = async (payload: IRegisterPayload) => {
 	const { name, password } = payload;

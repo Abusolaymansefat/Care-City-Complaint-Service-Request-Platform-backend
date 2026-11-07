@@ -43,6 +43,7 @@ router.post("/refresh-token", AuthController.refreshToken);
 router.get(
 	"/me",
 	auth(Role.CITIZEN, Role.TECHNICIAN, Role.DEPARTMENT_OFFICER, Role.ADMIN),
+	AuthController.getMe,
 );
 
 export const AuthRoutes = router;

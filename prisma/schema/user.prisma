@@ -34,6 +34,9 @@ model User {
   feedbacks Feedback[] @relation("CitizenFeedback")
   payments  Payment[]
 
+  // Notification relations
+  notifications Notification[] @relation("UserNotifications")
+
   @@index([departmentId])
   @@index([role, status])
   @@map("users")
