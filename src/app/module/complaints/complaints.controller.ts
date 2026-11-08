@@ -33,6 +33,7 @@ const createComplaint = catchAsync(async (req: Request, res: Response) => {
 	const result = await complaintsService.createComplaint(
 		user.userId,
 		req.body as ICreateComplaintPayload,
+		Array.isArray(req.files) ? req.files : [],
 	);
 
 	sendResponse(res, {

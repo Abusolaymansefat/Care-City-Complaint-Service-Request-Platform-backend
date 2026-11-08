@@ -16,7 +16,7 @@ router.post(
 
 router.get(
 	"/get-categories",
-	auth(Role.ADMIN),
+	auth(Role.ADMIN, Role.CITIZEN),
 	validateRequest(CategoriesValidation.categoryQuerySchema, "query"),
 	CategoriesController.getCategories,
 );
@@ -28,7 +28,7 @@ router.get(
 
 router.patch(
 	"/update-category/:id",
-	auth(Role.ADMIN),
+	auth(Role.ADMIN, Role.CITIZEN),
 	validateRequest(CategoriesValidation.categoryIdParamSchema, "params"),
 	validateRequest(CategoriesValidation.updateCategorySchema),
 	CategoriesController.updateCategory,

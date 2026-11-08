@@ -6,6 +6,7 @@ model Complaint {
   address      String
   latitude     Float?
   longitude    Float?
+  imageUrls    String[] @default([])
 
   status          ComplaintStatus @default(SUBMITTED)
   priority        Priority        @default(MEDIUM)

@@ -9,9 +9,9 @@ export interface ICreateNotificationPayload {
 }
 
 export interface INotificationQuery {
-	page?: number;
-	limit?: number;
-	isRead?: boolean;
+	page?: number | string;
+	limit?: number | string;
+	isRead?: boolean | string;
 	type?: NotificationType;
 	sortBy?: "createdAt" | "isRead";
 	sortOrder?: "asc" | "desc";

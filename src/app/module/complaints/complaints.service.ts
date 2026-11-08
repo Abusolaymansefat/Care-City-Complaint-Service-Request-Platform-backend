@@ -4,6 +4,8 @@ import {
 	Prisma,
 	Role,
 } from "../../../generated/prisma/client";
+import type { UploadApiResponse } from "cloudinary";
+import { cloudinary } from "../../lib/cloudinary";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import { FREE_COMPLAINT_LIMIT } from "../payments/payments.constants";
@@ -68,9 +70,60 @@ const complaintInclude = {
 	},
 };
 
+const cleanupComplaintImages = async (images: UploadApiResponse[]) => {
+	const results = await Promise.allSettled(
+		images.map((image) => cloudinary.uploader.destroy(image.public_id)),
+	);
+
+	results.forEach((result, index) => {
+		if (result.status === "rejected") {
+			console.error(
+				`Failed to clean up complaint image ${images[index]?.public_id}`,
+				result.reason,
+			);
+		}
+	});
+};
+
+const uploadComplaintImages = async (files: Express.Multer.File[]) => {
+	const uploaded: UploadApiResponse[] = [];
+
+	try {
+		for (const file of files) {
+			const image = await new Promise<UploadApiResponse>((resolve, reject) => {
+				cloudinary.uploader
+					.upload_stream(
+						{
+							folder: "citycare/complaints",
+							resource_type: "image",
+						},
+						(error, result) => {
+							if (error) return reject(error);
+							if (!result) {
+								return reject(
+									new Error("Cloudinary returned no complaint image"),
+								);
+							}
+							resolve(result);
+						},
+					)
+					.end(file.buffer);
+			});
+
+			uploaded.push(image);
+		}
+	} catch (error) {
+		await cleanupComplaintImages(uploaded);
+		throw error;
+	}
+
+	return uploaded;
+};
+
 const createComplaint = async (
 	citizenId: string,
 	payload: ICreateComplaintPayload,
+	files: Express.Multer.File[] = [],
 ) => {
 	const categorie = await prisma.category.findUnique({
 		where: { id: payload.categoryId },
@@ -98,14 +151,20 @@ const createComplaint = async (
 		where: { citizenId },
 	});
 
-	return prisma.complaint
-		.create({
+	const uploadedImages = await uploadComplaintImages(files);
+	let complaint: Prisma.ComplaintGetPayload<{
+		include: typeof complaintInclude;
+	}>;
+
+	try {
+		complaint = await prisma.complaint.create({
 			data: {
 				title: payload.title.trim(),
 				description: payload.description.trim(),
 				address: payload.address.trim(),
 				latitude: payload.latitude,
 				longitude: payload.longitude,
+				imageUrls: uploadedImages.map((image) => image.secure_url),
 				citizenId,
 				categoryId: categorie.id,
 				departmentId: categorie.departmentId,
@@ -113,22 +172,25 @@ const createComplaint = async (
 				paymentRequired: previousComplaintCount >= FREE_COMPLAINT_LIMIT,
 			},
 			include: complaintInclude,
-		})
-		.then(async (complaint) => {
-			await notificationService.createNotification({
-				userId: citizenId,
-				title: "Complaint submitted",
-				message: `Your complaint "${complaint.title}" (${complaint.trackingCode}) has been submitted successfully.`,
-				type: "COMPLAINT_CREATED",
-				link: `/complaints/${complaint.id}`,
-			});
-			return complaint;
 		});
+	} catch (error) {
+		await cleanupComplaintImages(uploadedImages);
+		throw error;
+	}
+
+	await notificationService.createNotification({
+		userId: citizenId,
+		title: "Complaint submitted",
+		message: `Your complaint "${complaint.title}" (${complaint.trackingCode}) has been submitted successfully.`,
+		type: "COMPLAINT_CREATED",
+		link: `/complaints/${complaint.id}`,
+	});
+	return complaint;
 };
 
 const getMyComplaints = async (citizenId: string, query: IComplaintQuery) => {
-	const page = query.page ?? 1;
-	const limit = query.limit ?? 10;
+	const page = Number(query.page ?? 1);
+	const limit = Number(query.limit ?? 10);
 	const skip = (page - 1) * limit;
 	const sortBy = query.sortBy ?? "createdAt";
 	const sortOrder = query.sortOrder ?? "desc";
@@ -177,10 +239,9 @@ const getComplaints = async (
 	query: IComplaintQuery,
 	role: Role,
 	userId: string,
-	departmentId?: string | null,
 ) => {
-	const page = query.page ?? 1;
-	const limit = query.limit ?? 10;
+	const page = Number(query.page ?? 1);
+	const limit = Number(query.limit ?? 10);
 	const skip = (page - 1) * limit;
 	const sortBy = query.sortBy ?? "createdAt";
 	const sortOrder = query.sortOrder ?? "desc";
@@ -207,13 +268,18 @@ const getComplaints = async (
 	if (role === Role.CITIZEN) {
 		conditions.push({ citizenId: userId });
 	} else if (role === Role.DEPARTMENT_OFFICER || role === Role.TECHNICIAN) {
-		if (!departmentId) {
+		const user = await prisma.user.findUnique({
+			where: { id: userId },
+			select: { departmentId: true },
+		});
+
+		if (!user?.departmentId) {
 			throw new AppError(
 				httpStatus.FORBIDDEN,
 				"Your account is not assigned to a department",
 			);
 		}
-		conditions.push({ departmentId });
+		conditions.push({ departmentId: user.departmentId });
 	}
 
 	const where: Prisma.ComplaintWhereInput = { AND: conditions };

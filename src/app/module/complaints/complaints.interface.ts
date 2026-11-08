@@ -29,8 +29,8 @@ export interface IComplaintQuery {
 	departmentId?: string;
 	status?: ComplaintStatus;
 	priority?: Priority | null;
-	page?: number;
-	limit?: number;
+	page?: number | string;
+	limit?: number | string;
 
 	sortBy?:
 		| "title"

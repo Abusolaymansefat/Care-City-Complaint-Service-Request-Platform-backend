@@ -23,15 +23,17 @@ const getMyNotifications = async (
 	userId: string,
 	query: INotificationQuery,
 ) => {
-	const page = query.page ?? 1;
-	const limit = query.limit ?? 10;
+	const page = Number(query.page ?? 1);
+	const limit = Number(query.limit ?? 10);
 	const skip = (page - 1) * limit;
 	const sortBy = query.sortBy ?? "createdAt";
 	const sortOrder = query.sortOrder ?? "desc";
+	const isRead =
+		typeof query.isRead === "string" ? query.isRead === "true" : query.isRead;
 
 	const where: Prisma.NotificationWhereInput = {
 		userId,
-		isRead: query.isRead,
+		isRead,
 		type: query.type,
 	};
 
