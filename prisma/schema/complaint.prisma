@@ -7,6 +7,7 @@ model Complaint {
   latitude     Float?
   longitude    Float?
   imageUrls    String[] @default([])
+  videoUrls    String[] @default([])
 
   status          ComplaintStatus @default(SUBMITTED)
   priority        Priority        @default(MEDIUM)

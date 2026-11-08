@@ -70,32 +70,56 @@ const complaintInclude = {
 	},
 };
 
-const cleanupComplaintImages = async (images: UploadApiResponse[]) => {
+const cleanupComplaintMedia = async (media: UploadApiResponse[]) => {
 	const results = await Promise.allSettled(
-		images.map((image) => cloudinary.uploader.destroy(image.public_id)),
+		media.map((item) =>
+			cloudinary.uploader.destroy(item.public_id, {
+				resource_type: item.resource_type,
+			}),
+		),
 	);
 
 	results.forEach((result, index) => {
 		if (result.status === "rejected") {
 			console.error(
-				`Failed to clean up complaint image ${images[index]?.public_id}`,
+				`Failed to clean up complaint attachment ${media[index]?.public_id}`,
 				result.reason,
 			);
 		}
 	});
 };
 
-const uploadComplaintImages = async (files: Express.Multer.File[]) => {
+const uploadComplaintMedia = async (files: Express.Multer.File[]) => {
+	const images = files.filter((file) => file.mimetype.startsWith("image/"));
+	const videos = files.filter((file) => file.mimetype.startsWith("video/"));
+
+	if (images.length > 5 || videos.length > 2) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Attach up to 5 images and 2 videos",
+		);
+	}
+
+	if (images.some((file) => file.size > 5 * 1024 * 1024)) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Each complaint image must be 5 MB or smaller",
+		);
+	}
+
 	const uploaded: UploadApiResponse[] = [];
 
 	try {
 		for (const file of files) {
+			const resourceType = file.mimetype.startsWith("video/")
+				? "video"
+				: "image";
 			const image = await new Promise<UploadApiResponse>((resolve, reject) => {
 				cloudinary.uploader
 					.upload_stream(
 						{
 							folder: "citycare/complaints",
-							resource_type: "image",
+							resource_type: resourceType,
 						},
 						(error, result) => {
 							if (error) return reject(error);
@@ -113,7 +137,7 @@ const uploadComplaintImages = async (files: Express.Multer.File[]) => {
 			uploaded.push(image);
 		}
 	} catch (error) {
-		await cleanupComplaintImages(uploaded);
+		await cleanupComplaintMedia(uploaded);
 		throw error;
 	}
 
@@ -151,7 +175,13 @@ const createComplaint = async (
 		where: { citizenId },
 	});
 
-	const uploadedImages = await uploadComplaintImages(files);
+	const uploadedMedia = await uploadComplaintMedia(files);
+	const imageUrls = uploadedMedia
+		.filter((item) => item.resource_type === "image")
+		.map((item) => item.secure_url);
+	const videoUrls = uploadedMedia
+		.filter((item) => item.resource_type === "video")
+		.map((item) => item.secure_url);
 	let complaint: Prisma.ComplaintGetPayload<{
 		include: typeof complaintInclude;
 	}>;
@@ -164,7 +194,8 @@ const createComplaint = async (
 				address: payload.address.trim(),
 				latitude: payload.latitude,
 				longitude: payload.longitude,
-				imageUrls: uploadedImages.map((image) => image.secure_url),
+				imageUrls,
+				videoUrls,
 				citizenId,
 				categoryId: categorie.id,
 				departmentId: categorie.departmentId,
@@ -174,7 +205,7 @@ const createComplaint = async (
 			include: complaintInclude,
 		});
 	} catch (error) {
-		await cleanupComplaintImages(uploadedImages);
+		await cleanupComplaintMedia(uploadedMedia);
 		throw error;
 	}
 

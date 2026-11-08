@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { Role } from "../../../generated/prisma/enums";
-import { uploadComplaintImages } from "../../lib/multer";
+import { uploadComplaintMedia } from "../../lib/multer";
 import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
 import { ComplaintsController } from "./complaints.controller";
@@ -11,7 +11,7 @@ const router = Router();
 router.post(
 	"/create-complaint",
 	auth(Role.CITIZEN, Role.DEPARTMENT_OFFICER, Role.TECHNICIAN, Role.ADMIN),
-	uploadComplaintImages,
+	uploadComplaintMedia,
 	validateRequest(ComplaintsValidation.createComplaintSchema),
 	ComplaintsController.createComplaint,
 );

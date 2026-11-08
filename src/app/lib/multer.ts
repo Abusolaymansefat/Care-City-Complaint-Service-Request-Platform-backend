@@ -6,18 +6,27 @@ const storage = multer.memoryStorage();
 
 export const upload = multer({ storage: storage });
 
-const complaintImagesUpload = multer({
+const complaintMediaUpload = multer({
 	storage,
 	limits: {
-		fileSize: 5 * 1024 * 1024,
-		files: 5,
+		fileSize: 20 * 1024 * 1024,
+		files: 7,
 	},
 	fileFilter: (_req, file, callback) => {
-		if (!["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) {
+		if (
+			![
+				"image/jpeg",
+				"image/png",
+				"image/webp",
+				"video/mp4",
+				"video/webm",
+				"video/quicktime",
+			].includes(file.mimetype)
+		) {
 			callback(
 				new AppError(
 					httpStatus.BAD_REQUEST,
-					"Complaint images must be JPEG, PNG, or WebP files",
+					"Complaint attachments must be JPEG, PNG, WebP, MP4, WebM, or QuickTime files",
 				),
 			);
 			return;
@@ -27,4 +36,4 @@ const complaintImagesUpload = multer({
 	},
 });
 
-export const uploadComplaintImages = complaintImagesUpload.array("images", 5);
+export const uploadComplaintMedia = complaintMediaUpload.array("media", 7);

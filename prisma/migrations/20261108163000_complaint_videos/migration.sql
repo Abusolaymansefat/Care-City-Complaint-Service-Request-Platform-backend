@@ -1,0 +1,2 @@
+ALTER TABLE "complaints"
+ADD COLUMN "videoUrls" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

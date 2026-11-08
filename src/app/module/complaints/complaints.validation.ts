@@ -3,14 +3,27 @@ import { ComplaintStatus, Priority } from "../../../generated/prisma/enums";
 
 const uuidSchema = z.string().uuid("Invalid UUID");
 
-const createComplaintSchema = z.object({
-	title: z.string().trim().min(5).max(150),
-	description: z.string().trim().min(10).max(3000),
-	address: z.string().trim().min(5).max(300),
-	latitude: z.number().min(-90).max(90).optional(),
-	longitude: z.number().min(-180).max(180).optional(),
-	categoryId: uuidSchema,
-});
+const createComplaintSchema = z
+	.object({
+		title: z.string().trim().min(5).max(150),
+		description: z.string().trim().min(10).max(3000),
+		address: z.string().trim().min(5).max(300),
+		latitude: z.preprocess(
+			(value) =>
+				typeof value === "string" && value.trim() ? Number(value) : value,
+			z.number().min(-90).max(90).optional(),
+		),
+		longitude: z.preprocess(
+			(value) =>
+				typeof value === "string" && value.trim() ? Number(value) : value,
+			z.number().min(-180).max(180).optional(),
+		),
+		categoryId: uuidSchema,
+	})
+	.refine(
+		(data) => (data.latitude === undefined) === (data.longitude === undefined),
+		{ message: "Latitude and longitude must be provided together" },
+	);
 
 const updateComplaintSchema = z
 	.object({
