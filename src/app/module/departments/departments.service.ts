@@ -146,19 +146,45 @@ const updateDepartment = async (
 };
 
 const deleteDepartment = async (id: string) => {
-	try {
-		const deletedDepartment = await prisma.department.delete({
-			where: {
-				id,
+	const department = await prisma.department.findUnique({
+		where: { id },
+		select: {
+			_count: {
+				select: {
+					users: true,
+					categories: true,
+					complaints: true,
+				},
 			},
-		});
+		},
+	});
 
-		return deletedDepartment;
-	} catch (error) {
+	if (!department) {
+		throw new AppError(httpStatus.NOT_FOUND, "Department not found");
+	}
+
+	const { users, categories, complaints } = department._count;
+	if (users + categories + complaints > 0) {
 		throw new AppError(
-			httpStatus.INTERNAL_SERVER_ERROR,
-			"Internal server error",
+			httpStatus.CONFLICT,
+			"This department still has linked users, categories, or complaints. Reassign or remove them before deleting.",
 		);
+	}
+
+	try {
+		return await prisma.department.delete({ where: { id } });
+	} catch (error) {
+		if (
+			error instanceof Prisma.PrismaClientKnownRequestError &&
+			error.code === "P2003"
+		) {
+			throw new AppError(
+				httpStatus.CONFLICT,
+				"This department has linked records and cannot be deleted.",
+			);
+		}
+
+		throw error;
 	}
 };
 

@@ -35,6 +35,13 @@ router.get(
 );
 
 router.get(
+	"/get-payment-stats",
+	auth(Role.ADMIN),
+	validateRequest(PaymentsValidation.paymentStatsQuerySchema, "query"),
+	PaymentsController.getPaymentStats,
+);
+
+router.get(
 	"/get-payment/:id",
 	auth(Role.CITIZEN, Role.ADMIN),
 	validateRequest(PaymentsValidation.paymentIdParamSchema, "params"),

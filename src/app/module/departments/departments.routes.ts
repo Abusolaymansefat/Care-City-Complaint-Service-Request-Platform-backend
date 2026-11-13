@@ -10,7 +10,7 @@ const router = Router();
 // Admin only: create department
 router.post(
 	"/create-department",
-	auth(Role.ADMIN, Role.CITIZEN),
+	auth(Role.ADMIN),
 	validateRequest(DepartmentsValidation.createDepartmentSchema),
 	DepartmentsController.createDepartment,
 );
@@ -32,7 +32,7 @@ router.get(
 // Admin only: update department
 router.patch(
 	"/update-department/:id",
-	auth(Role.ADMIN, Role.CITIZEN),
+	auth(Role.ADMIN),
 	validateRequest(DepartmentsValidation.departmentIdParamSchema, "params"),
 	validateRequest(DepartmentsValidation.updateDepartmentSchema),
 	DepartmentsController.updateDepartment,
@@ -41,7 +41,7 @@ router.patch(
 // Admin only: delete department
 router.delete(
 	"/delete-department/:id",
-	auth(Role.ADMIN, Role.CITIZEN),
+	auth(Role.ADMIN),
 	validateRequest(DepartmentsValidation.departmentIdParamSchema, "params"),
 	DepartmentsController.deleteDepartment,
 );

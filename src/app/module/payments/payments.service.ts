@@ -1,4 +1,5 @@
 import httpStatus from "http-status";
+import { subDays, subMonths, subYears } from "date-fns";
 import {
 	ComplaintStatus,
 	PaymentStatus,
@@ -11,7 +12,11 @@ import { getBkashIdToken } from "../../lib/bkash";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
 import { COMPLAINT_FEE, FREE_COMPLAINT_LIMIT } from "./payments.constants";
-import type { IPaymentQuery } from "./payments.interface";
+import type {
+	IPaymentQuery,
+	IPaymentStatsQuery,
+	PaymentPeriod,
+} from "./payments.interface";
 import { notificationService } from "../notification/notification.service";
 
 type IBkashCreateResponse = {
@@ -47,6 +52,20 @@ const paymentInclude = {
 			email: true,
 		},
 	},
+};
+
+const getPeriodStart = (
+	period: Exclude<PaymentPeriod, "all">,
+	now = new Date(),
+) => {
+	switch (period) {
+		case "7d":
+			return subDays(now, 7);
+		case "1m":
+			return subMonths(now, 1);
+		case "1y":
+			return subYears(now, 1);
+	}
 };
 
 const bkashHeaders = async () => {
@@ -370,15 +389,19 @@ const listPayments = async (
 	where: Prisma.PaymentWhereInput,
 	query: IPaymentQuery,
 ) => {
-	const page = query.page ?? 1;
-	const limit = query.limit ?? 10;
+	const page = Number(query.page ?? 1);
+	const limit = Number(query.limit ?? 10);
 	const skip = (page - 1) * limit;
 	const sortBy = query.sortBy ?? "createdAt";
 	const sortOrder = query.sortOrder ?? "desc";
+	const filteredWhere: Prisma.PaymentWhereInput =
+		query.period && query.period !== "all"
+			? { ...where, createdAt: { gte: getPeriodStart(query.period) } }
+			: where;
 
 	const [payments, total] = await Promise.all([
 		prisma.payment.findMany({
-			where,
+			where: filteredWhere,
 			skip,
 			take: limit,
 			orderBy: {
@@ -386,7 +409,7 @@ const listPayments = async (
 			},
 			include: paymentInclude,
 		}),
-		prisma.payment.count({ where }),
+		prisma.payment.count({ where: filteredWhere }),
 	]);
 
 	return {
@@ -419,6 +442,26 @@ const getPayments = async (query: IPaymentQuery) =>
 		query,
 	);
 
+const getPaymentStats = async ({ period }: IPaymentStatsQuery) => {
+	const where: Prisma.PaymentWhereInput = {
+		status: PaymentStatus.PAID,
+		...(period === "all" ? {} : { paidAt: { gte: getPeriodStart(period) } }),
+	};
+	const [aggregate, paidCount] = await Promise.all([
+		prisma.payment.aggregate({
+			where,
+			_sum: { amount: true },
+		}),
+		prisma.payment.count({ where }),
+	]);
+
+	return {
+		period,
+		totalAmount: aggregate._sum.amount?.toString() ?? "0",
+		paidCount,
+	};
+};
+
 const getPaymentById = async (id: string, userId: string, role: Role) => {
 	const payment = await prisma.payment.findUnique({
 		where: { id },
@@ -447,5 +490,6 @@ export const paymentsService = {
 	handleBkashCallback,
 	getMyPayments,
 	getPayments,
+	getPaymentStats,
 	getPaymentById,
 };

@@ -71,10 +71,10 @@ export const auth = (...requiredRoles: Role[]) => {
 			);
 		}
 
-		if (user.status === UserStatus.BANNED) {
+		if (user.isDeleted || user.status !== UserStatus.ACTIVE) {
 			throw new AppError(
 				httpStatus.FORBIDDEN,
-				"Your account has been blocked. Please contact support.",
+				"Your account is not active. Please contact support.",
 			);
 		}
 

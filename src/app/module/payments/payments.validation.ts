@@ -21,8 +21,13 @@ const paymentQuerySchema = z.object({
 	complaintId: uuidSchema.optional(),
 	page: z.coerce.number().int().min(1).default(1),
 	limit: z.coerce.number().int().min(1).max(100).default(10),
+	period: z.enum(["all", "7d", "1m", "1y"]).optional(),
 	sortBy: z.enum(["createdAt", "updatedAt", "amount", "status"]).optional(),
 	sortOrder: z.enum(["asc", "desc"]).optional(),
+});
+
+const paymentStatsQuerySchema = z.object({
+	period: z.enum(["all", "7d", "1m", "1y"]).default("7d"),
 });
 
 export const PaymentsValidation = {
@@ -30,4 +35,5 @@ export const PaymentsValidation = {
 	bkashCallbackQuerySchema,
 	paymentIdParamSchema,
 	paymentQuerySchema,
+	paymentStatsQuerySchema,
 };

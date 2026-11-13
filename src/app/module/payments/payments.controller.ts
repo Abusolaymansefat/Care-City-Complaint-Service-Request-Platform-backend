@@ -7,9 +7,9 @@ import { sendResponse } from "../../utils/sendResponse";
 import type {
 	IBkashCallbackQuery,
 	IInitiatePaymentPayload,
-	IPaymentQuery,
 } from "./payments.interface";
 import { paymentsService } from "./payments.service";
+import { PaymentsValidation } from "./payments.validation";
 
 const getAuthenticatedUser = (req: Request) => {
 	if (!req.user) {
@@ -58,7 +58,7 @@ const getMyPayments = catchAsync(async (req: Request, res: Response) => {
 	const user = getAuthenticatedUser(req);
 	const result = await paymentsService.getMyPayments(
 		user.userId,
-		req.query as unknown as IPaymentQuery,
+		PaymentsValidation.paymentQuerySchema.parse(req.query),
 	);
 
 	sendResponse(res, {
@@ -72,7 +72,7 @@ const getMyPayments = catchAsync(async (req: Request, res: Response) => {
 
 const getPayments = catchAsync(async (req: Request, res: Response) => {
 	const result = await paymentsService.getPayments(
-		req.query as unknown as IPaymentQuery,
+		PaymentsValidation.paymentQuerySchema.parse(req.query),
 	);
 
 	sendResponse(res, {
@@ -81,6 +81,19 @@ const getPayments = catchAsync(async (req: Request, res: Response) => {
 		message: "Payments retrieved successfully",
 		data: result.data,
 		meta: result.meta,
+	});
+});
+
+const getPaymentStats = catchAsync(async (req: Request, res: Response) => {
+	const result = await paymentsService.getPaymentStats(
+		PaymentsValidation.paymentStatsQuerySchema.parse(req.query),
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Payment statistics retrieved successfully",
+		data: result,
 	});
 });
 
@@ -105,5 +118,6 @@ export const PaymentsController = {
 	handleBkashCallback,
 	getMyPayments,
 	getPayments,
+	getPaymentStats,
 	getPaymentById,
 };
