@@ -3,6 +3,7 @@ import {
 	ComplaintStatus,
 	Prisma,
 	Role,
+	UserStatus,
 } from "../../../generated/prisma/client";
 import type { UploadApiResponse } from "cloudinary";
 import { cloudinary } from "../../lib/cloudinary";
@@ -70,7 +71,34 @@ const complaintInclude = {
 	},
 };
 
-const cleanupComplaintMedia = async (media: UploadApiResponse[]) => {
+const publicComplaintSelect = {
+	id: true,
+	trackingCode: true,
+	title: true,
+	description: true,
+	address: true,
+	imageUrls: true,
+	priority: true,
+	status: true,
+	createdAt: true,
+	category: {
+		select: {
+			id: true,
+			name: true,
+		},
+	},
+} satisfies Prisma.ComplaintSelect;
+
+type ComplaintMediaAsset = {
+	public_id: string;
+	resource_type: "image" | "video";
+};
+
+type UploadedComplaintMedia = ComplaintMediaAsset & {
+	secure_url: string;
+};
+
+const cleanupComplaintMedia = async (media: ComplaintMediaAsset[]) => {
 	const results = await Promise.allSettled(
 		media.map((item) =>
 			cloudinary.uploader.destroy(item.public_id, {
@@ -107,7 +135,7 @@ const uploadComplaintMedia = async (files: Express.Multer.File[]) => {
 		);
 	}
 
-	const uploaded: UploadApiResponse[] = [];
+	const uploaded: UploadedComplaintMedia[] = [];
 
 	try {
 		for (const file of files) {
@@ -134,7 +162,11 @@ const uploadComplaintMedia = async (files: Express.Multer.File[]) => {
 					.end(file.buffer);
 			});
 
-			uploaded.push(image);
+			uploaded.push({
+				public_id: image.public_id,
+				secure_url: image.secure_url,
+				resource_type: resourceType,
+			});
 		}
 	} catch (error) {
 		await cleanupComplaintMedia(uploaded);
@@ -209,13 +241,98 @@ const createComplaint = async (
 		throw error;
 	}
 
-	await notificationService.createNotification({
-		userId: citizenId,
-		title: "Complaint submitted",
-		message: `Your complaint "${complaint.title}" (${complaint.trackingCode}) has been submitted successfully.`,
-		type: "COMPLAINT_CREATED",
-		link: `/complaints/${complaint.id}`,
+	const staffRecipients = await prisma.user.findMany({
+		where: {
+			isDeleted: false,
+			status: UserStatus.ACTIVE,
+			OR: [
+				{ role: Role.ADMIN },
+				{
+					role: Role.DEPARTMENT_OFFICER,
+					departmentId: complaint.departmentId,
+				},
+			],
+		},
+		select: { id: true },
 	});
+
+	await Promise.all([
+		notificationService.createNotification({
+			userId: citizenId,
+			title: "Complaint submitted",
+			message: `Your complaint "${complaint.title}" (${complaint.trackingCode}) has been submitted successfully.`,
+			type: "COMPLAINT_CREATED",
+			link: `/complaints/${complaint.id}`,
+		}),
+		...staffRecipients
+			.filter((recipient) => recipient.id !== citizenId)
+			.map((recipient) =>
+				notificationService.createNotification({
+					userId: recipient.id,
+					title: "New complaint submitted",
+					message: `A new complaint "${complaint.title}" (${complaint.trackingCode}) is available for review.`,
+					type: "COMPLAINT_CREATED",
+					link: `/complaints/${complaint.id}`,
+				}),
+			),
+	]);
+	return complaint;
+};
+
+const getPublicComplaints = async (query: IComplaintQuery) => {
+	const page = Number(query.page ?? 1);
+	const limit = Number(query.limit ?? 6);
+	const skip = (page - 1) * limit;
+	const sortBy = query.sortBy ?? "createdAt";
+	const sortOrder = query.sortOrder ?? "desc";
+	const where: Prisma.ComplaintWhereInput = {
+		deletedAt: null,
+		categoryId: query.categoryId,
+		departmentId: query.departmentId,
+		status: query.status,
+		priority: query.priority ?? undefined,
+		...(query.searchTerm && {
+			OR: [
+				{ title: { contains: query.searchTerm, mode: "insensitive" } },
+				{ description: { contains: query.searchTerm, mode: "insensitive" } },
+				{ address: { contains: query.searchTerm, mode: "insensitive" } },
+				{ trackingCode: { contains: query.searchTerm, mode: "insensitive" } },
+			],
+		}),
+	};
+
+	const [complaints, total] = await Promise.all([
+		prisma.complaint.findMany({
+			where,
+			skip,
+			take: limit,
+			orderBy: { [sortBy]: sortOrder },
+			select: publicComplaintSelect,
+		}),
+		prisma.complaint.count({ where }),
+	]);
+
+	return {
+		data: complaints,
+		meta: {
+			page,
+			limit,
+			total,
+			totalPages: Math.ceil(total / limit),
+		},
+	};
+};
+
+const getPublicComplaintById = async (id: string) => {
+	const complaint = await prisma.complaint.findFirst({
+		where: { id, deletedAt: null },
+		select: publicComplaintSelect,
+	});
+
+	if (!complaint) {
+		throw new AppError(httpStatus.NOT_FOUND, "Complaint not found");
+	}
+
 	return complaint;
 };
 
@@ -228,6 +345,7 @@ const getMyComplaints = async (citizenId: string, query: IComplaintQuery) => {
 
 	const where: Prisma.ComplaintWhereInput = {
 		citizenId,
+		deletedAt: null,
 		categoryId: query.categoryId,
 		departmentId: query.departmentId,
 		status: query.status,
@@ -276,7 +394,7 @@ const getComplaints = async (
 	const skip = (page - 1) * limit;
 	const sortBy = query.sortBy ?? "createdAt";
 	const sortOrder = query.sortOrder ?? "desc";
-	const conditions: Prisma.ComplaintWhereInput[] = [];
+	const conditions: Prisma.ComplaintWhereInput[] = [{ deletedAt: null }];
 
 	if (query.searchTerm) {
 		conditions.push({
@@ -340,8 +458,8 @@ const getComplaints = async (
 };
 
 const getComplaintById = async (id: string, userId: string, role: Role) => {
-	const complaint = await prisma.complaint.findUnique({
-		where: { id },
+	const complaint = await prisma.complaint.findFirst({
+		where: { id, deletedAt: null },
 		include: complaintInclude,
 	});
 
@@ -352,8 +470,16 @@ const getComplaintById = async (id: string, userId: string, role: Role) => {
 	const isAdmin = role === Role.ADMIN;
 	const isCitizenOwner =
 		role === Role.CITIZEN && complaint.citizenId === userId;
+	const officer =
+		role === Role.DEPARTMENT_OFFICER
+			? await prisma.user.findUnique({
+					where: { id: userId },
+					select: { departmentId: true },
+				})
+			: null;
 	const isDepartmentOfficer =
-		role === Role.DEPARTMENT_OFFICER && complaint.departmentId === userId;
+		role === Role.DEPARTMENT_OFFICER &&
+		complaint.departmentId === officer?.departmentId;
 
 	if (!isAdmin && !isCitizenOwner && !isDepartmentOfficer) {
 		throw new AppError(
@@ -377,11 +503,11 @@ const updateComplaint = async (
 	citizenId: string,
 	payload: IUpdateComplaintPayload,
 ) => {
-	const complaint = await prisma.complaint.findUnique({
+	const complaint = await prisma.complaint.findFirst({
 		where: { id },
 	});
 
-	if (!complaint) {
+	if (!complaint || complaint.deletedAt) {
 		throw new AppError(httpStatus.NOT_FOUND, "Complaint not found");
 	}
 
@@ -434,6 +560,47 @@ const updateComplaint = async (
 	});
 };
 
+const deleteComplaint = async (id: string, userId: string, role: Role) => {
+	const complaint = await prisma.complaint.findUnique({
+		where: { id },
+		select: {
+			id: true,
+			citizenId: true,
+			status: true,
+			deletedAt: true,
+		},
+	});
+
+	if (!complaint || complaint.deletedAt) {
+		throw new AppError(httpStatus.NOT_FOUND, "Complaint not found");
+	}
+
+	if (role === Role.CITIZEN && complaint.citizenId !== userId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"You are not authorized to delete this complaint",
+		);
+	}
+
+	if (role === Role.CITIZEN && complaint.status !== ComplaintStatus.SUBMITTED) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Only submitted complaints can be deleted",
+		);
+	}
+
+	const archived = await prisma.complaint.updateMany({
+		where: { id: complaint.id, deletedAt: null },
+		data: { deletedAt: new Date() },
+	});
+
+	if (archived.count === 0) {
+		throw new AppError(httpStatus.NOT_FOUND, "Complaint not found");
+	}
+
+	return { id: complaint.id };
+};
+
 const updateComplaintStatus = async (
 	id: string,
 	updaterId: string,
@@ -451,8 +618,8 @@ const updateComplaintStatus = async (
 		);
 	}
 
-	const complaint = await prisma.complaint.findUnique({
-		where: { id },
+	const complaint = await prisma.complaint.findFirst({
+		where: { id, deletedAt: null },
 	});
 
 	if (!complaint) {
@@ -526,9 +693,12 @@ const updateComplaintStatus = async (
 
 export const complaintsService = {
 	createComplaint,
+	getPublicComplaints,
+	getPublicComplaintById,
 	getMyComplaints,
 	getComplaints,
 	getComplaintById,
 	updateComplaint,
+	deleteComplaint,
 	updateComplaintStatus,
 };

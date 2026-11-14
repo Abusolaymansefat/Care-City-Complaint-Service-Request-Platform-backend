@@ -71,7 +71,7 @@ const createAssignment = async (
 		}),
 	]);
 
-	if (!complaint) {
+	if (!complaint || complaint.deletedAt) {
 		throw new AppError(httpStatus.NOT_FOUND, "Complaint not found");
 	}
 
@@ -203,11 +203,12 @@ const getAssignments = async (
 		complaint?: {
 			citizenId?: string;
 			departmentId?: string;
+			deletedAt?: null;
 		};
-	} = {};
+	} = { complaint: { deletedAt: null } };
 
 	if (role === Role.TECHNICIAN) {
-		where = { technicianId: userId };
+		where = { technicianId: userId, complaint: { deletedAt: null } };
 	} else if (role === Role.DEPARTMENT_OFFICER) {
 		const officer = await prisma.user.findUnique({
 			where: { id: userId },
@@ -221,9 +222,11 @@ const getAssignments = async (
 			);
 		}
 
-		where = { complaint: { departmentId: officer.departmentId } };
+		where = {
+			complaint: { departmentId: officer.departmentId, deletedAt: null },
+		};
 	} else if (role === Role.CITIZEN) {
-		where = { complaint: { citizenId: userId } };
+		where = { complaint: { citizenId: userId, deletedAt: null } };
 	} else if (role !== Role.ADMIN) {
 		throw new AppError(
 			httpStatus.FORBIDDEN,
@@ -261,9 +264,10 @@ const updateAssignmentStatus = async (
 ) => {
 	const assignment = await prisma.assignment.findUnique({
 		where: { id },
+		include: { complaint: { select: { deletedAt: true } } },
 	});
 
-	if (!assignment) {
+	if (!assignment || assignment.complaint.deletedAt) {
 		throw new AppError(httpStatus.NOT_FOUND, "Assignment not found");
 	}
 

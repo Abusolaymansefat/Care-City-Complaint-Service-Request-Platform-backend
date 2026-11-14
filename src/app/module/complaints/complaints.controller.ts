@@ -44,6 +44,35 @@ const createComplaint = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const getPublicComplaints = catchAsync(async (req: Request, res: Response) => {
+	const result = await complaintsService.getPublicComplaints(
+		req.query as unknown as IComplaintQuery,
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Public complaints retrieved successfully",
+		data: result.data,
+		meta: result.meta,
+	});
+});
+
+const getPublicComplaintById = catchAsync(
+	async (req: Request, res: Response) => {
+		const result = await complaintsService.getPublicComplaintById(
+			getComplaintId(req),
+		);
+
+		sendResponse(res, {
+			statusCode: httpStatus.OK,
+			success: true,
+			message: "Public complaint retrieved successfully",
+			data: result,
+		});
+	},
+);
+
 const getMyComplaints = catchAsync(async (req: Request, res: Response) => {
 	const user = getAuthenticatedUser(req);
 	const result = await complaintsService.getMyComplaints(
@@ -109,6 +138,22 @@ const updateComplaint = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const deleteComplaint = catchAsync(async (req: Request, res: Response) => {
+	const user = getAuthenticatedUser(req);
+	const result = await complaintsService.deleteComplaint(
+		getComplaintId(req),
+		user.userId,
+		user.role,
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Complaint deleted successfully",
+		data: result,
+	});
+});
+
 const updateComplaintStatus = catchAsync(
 	async (req: Request, res: Response) => {
 		const user = getAuthenticatedUser(req);
@@ -130,9 +175,12 @@ const updateComplaintStatus = catchAsync(
 
 export const ComplaintsController = {
 	createComplaint,
+	getPublicComplaints,
+	getPublicComplaintById,
 	getMyComplaints,
 	getComplaints,
 	getComplaintById,
 	updateComplaint,
+	deleteComplaint,
 	updateComplaintStatus,
 };

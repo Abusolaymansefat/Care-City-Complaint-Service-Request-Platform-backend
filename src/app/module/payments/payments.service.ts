@@ -99,8 +99,8 @@ const isPaymentRequiredForComplaint = async (
 };
 
 const getComplaintForPayment = async (complaintId: string, userId: string) => {
-	const complaint = await prisma.complaint.findUnique({
-		where: { id: complaintId },
+	const complaint = await prisma.complaint.findFirst({
+		where: { id: complaintId, deletedAt: null },
 		select: {
 			id: true,
 			citizenId: true,
@@ -271,7 +271,7 @@ const initiatePayment = async (userId: string, complaintId: string) => {
 			title: "Payment initiated",
 			message: `A payment of ${COMPLAINT_FEE} BDT for invoice ${invoiceNumber} has been started. Complete it on bKash.`,
 			type: "PAYMENT_INITIATED",
-			link: `/payments/${updatedPayment.id}`,
+			link: `/citizen/payments/${updatedPayment.id}`,
 		});
 
 		return updatedPayment;
@@ -368,7 +368,7 @@ const handleBkashCallback = async (paymentID: string, status: string) => {
 			title: "Payment successful",
 			message: `Your payment of ${COMPLAINT_FEE} BDT (invoice ${payment.invoiceNumber}) was completed successfully.`,
 			type: "PAYMENT_PAID",
-			link: `/payments/${updatedPayment.id}`,
+			link: `/citizen/payments/${updatedPayment.id}`,
 		});
 
 		return updatedPayment;

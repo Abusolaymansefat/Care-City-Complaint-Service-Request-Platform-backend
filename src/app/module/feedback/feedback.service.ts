@@ -12,8 +12,8 @@ const createFeedback = async (
 	citizenId: string,
 	payload: ICreateFeedbackPayload,
 ) => {
-	const complaint = await prisma.complaint.findUnique({
-		where: { id: payload.complaintId },
+	const complaint = await prisma.complaint.findFirst({
+		where: { id: payload.complaintId, deletedAt: null },
 		select: {
 			id: true,
 			status: true,

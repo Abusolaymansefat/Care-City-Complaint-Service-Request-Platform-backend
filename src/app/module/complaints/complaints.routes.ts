@@ -17,6 +17,18 @@ router.post(
 );
 
 router.get(
+	"/get-public-complaints",
+	validateRequest(ComplaintsValidation.complaintQuerySchema, "query"),
+	ComplaintsController.getPublicComplaints,
+);
+
+router.get(
+	"/get-public-complaint/:id",
+	validateRequest(ComplaintsValidation.complaintIdParamSchema, "params"),
+	ComplaintsController.getPublicComplaintById,
+);
+
+router.get(
 	"/get-my-complaints",
 	auth(Role.CITIZEN),
 	validateRequest(ComplaintsValidation.complaintQuerySchema, "query"),
@@ -42,6 +54,13 @@ router.patch(
 	auth(Role.CITIZEN),
 	validateRequest(ComplaintsValidation.updateComplaintSchema),
 	ComplaintsController.updateComplaint,
+);
+
+router.delete(
+	"/delete-complaint/:id",
+	auth(Role.CITIZEN, Role.ADMIN),
+	validateRequest(ComplaintsValidation.complaintIdParamSchema, "params"),
+	ComplaintsController.deleteComplaint,
 );
 
 router.patch(

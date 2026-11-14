@@ -50,7 +50,7 @@ const handleBkashCallback = catchAsync(async (req: Request, res: Response) => {
 	const frontendUrl = config.frontend_url.replace(/\/+$/, "");
 
 	res.redirect(
-		`${frontendUrl}/payments/callback?paymentId=${result.id}&status=${result.status}`,
+		`${frontendUrl}/citizen/payments/callback?paymentId=${result.id}&status=${result.status}`,
 	);
 });
 
