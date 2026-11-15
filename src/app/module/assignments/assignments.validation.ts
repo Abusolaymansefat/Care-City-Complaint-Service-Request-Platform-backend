@@ -1,24 +1,18 @@
 import { z } from "zod";
 
 export const createAssignmentSchema = z.object({
-	body: z.object({
-		complaintId: z.string().uuid(),
-		technicianId: z.string().uuid(),
-		notes: z.string().max(1000).optional(),
-	}),
+	complaintId: z.string().uuid(),
+	technicianId: z.string().uuid(),
+	notes: z.string().max(1000).optional(),
 });
 
 export const updateAssignmentStatusSchema = z.object({
-	body: z.object({
-		status: z.enum(["IN_PROGRESS", "COMPLETED", "REJECTED"]),
-		notes: z.string().max(1000).optional(),
-	}),
+	status: z.enum(["IN_PROGRESS", "COMPLETED", "REJECTED"]),
+	notes: z.string().max(1000).optional(),
 });
 
 export const assignmentIdSchema = z.object({
-	params: z.object({
-		id: z.string().uuid(),
-	}),
+	id: z.string().uuid(),
 });
 
 export const assignmentQuerySchema = z.object({

@@ -23,7 +23,7 @@ router.get(
 );
 
 router.patch(
-	"/update-assignment-status:id/status",
+	"/update-assignment-status/:id/status",
 	auth(Role.ADMIN, Role.DEPARTMENT_OFFICER, Role.TECHNICIAN),
 	validateRequest(updateAssignmentStatusSchema),
 	AssignmentsController.updateAssignmentStatus,
