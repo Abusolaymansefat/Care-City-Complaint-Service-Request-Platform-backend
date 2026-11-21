@@ -1,5 +1,5 @@
-import httpStatus from "http-status";
 import { subDays, subMonths, subYears } from "date-fns";
+import httpStatus from "http-status";
 import {
 	ComplaintStatus,
 	PaymentStatus,
@@ -11,13 +11,13 @@ import config from "../../config";
 import { getBkashIdToken } from "../../lib/bkash";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
+import { notificationService } from "../notification/notification.service";
 import { COMPLAINT_FEE, FREE_COMPLAINT_LIMIT } from "./payments.constants";
 import type {
 	IPaymentQuery,
 	IPaymentStatsQuery,
 	PaymentPeriod,
 } from "./payments.interface";
-import { notificationService } from "../notification/notification.service";
 
 type IBkashCreateResponse = {
 	statusCode?: string;
@@ -442,6 +442,44 @@ const getPayments = async (query: IPaymentQuery) =>
 		query,
 	);
 
+const getDepartmentPayments = async (
+	officerId: string,
+	query: IPaymentQuery,
+) => {
+	const officer = await prisma.user.findFirst({
+		where: {
+			id: officerId,
+			role: Role.DEPARTMENT_OFFICER,
+			status: "ACTIVE",
+			isDeleted: false,
+		},
+		select: { departmentId: true },
+	});
+
+	if (!officer?.departmentId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Your account is not assigned to a department",
+		);
+	}
+
+	const result = await listPayments(
+		{
+			status: query.status,
+			complaintId: query.complaintId,
+			complaint: {
+				departmentId: officer.departmentId,
+				deletedAt: null,
+			},
+		},
+		query,
+	);
+	return {
+		...result,
+		data: result.data.map((payment) => ({ ...payment, paymentUrl: null })),
+	};
+};
+
 const getPaymentStats = async ({ period }: IPaymentStatsQuery) => {
 	const where: Prisma.PaymentWhereInput = {
 		status: PaymentStatus.PAID,
@@ -490,6 +528,7 @@ export const paymentsService = {
 	handleBkashCallback,
 	getMyPayments,
 	getPayments,
+	getDepartmentPayments,
 	getPaymentStats,
 	getPaymentById,
 };

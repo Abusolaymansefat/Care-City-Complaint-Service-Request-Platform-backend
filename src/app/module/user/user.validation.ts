@@ -14,6 +14,12 @@ const userQuerySchema = z.object({
 	limit: z.coerce.number().int().min(1).max(100).default(10),
 });
 
+const departmentTechniciansQuerySchema = z.object({
+	searchTerm: z.string().trim().max(100).optional(),
+	page: z.coerce.number().int().min(1).default(1),
+	limit: z.coerce.number().int().min(1).max(100).default(10),
+});
+
 const updateUserSchema = z
 	.object({
 		role: z
@@ -29,5 +35,6 @@ const updateUserSchema = z
 export const UserValidation = {
 	userIdParamSchema,
 	userQuerySchema,
+	departmentTechniciansQuerySchema,
 	updateUserSchema,
 };

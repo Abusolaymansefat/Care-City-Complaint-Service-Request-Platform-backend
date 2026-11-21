@@ -35,6 +35,13 @@ router.get(
 );
 
 router.get(
+	"/get-department-payments",
+	auth(Role.DEPARTMENT_OFFICER),
+	validateRequest(PaymentsValidation.paymentQuerySchema, "query"),
+	PaymentsController.getDepartmentPayments,
+);
+
+router.get(
 	"/get-payment-stats",
 	auth(Role.ADMIN),
 	validateRequest(PaymentsValidation.paymentStatsQuerySchema, "query"),

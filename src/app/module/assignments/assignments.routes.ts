@@ -24,7 +24,7 @@ router.get(
 
 router.patch(
 	"/update-assignment-status/:id/status",
-	auth(Role.ADMIN, Role.DEPARTMENT_OFFICER, Role.TECHNICIAN),
+	auth(Role.ADMIN, Role.TECHNICIAN),
 	validateRequest(updateAssignmentStatusSchema),
 	AssignmentsController.updateAssignmentStatus,
 );

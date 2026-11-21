@@ -18,4 +18,5 @@ export const assignmentIdSchema = z.object({
 export const assignmentQuerySchema = z.object({
 	page: z.coerce.number().int().min(1).default(1),
 	limit: z.coerce.number().int().min(1).max(100).default(10),
+	technicianId: z.string().uuid().optional(),
 });

@@ -14,4 +14,5 @@ export interface IUpdateAssignmentStatusPayload {
 export interface IAssignmentQuery {
 	page?: number;
 	limit?: number;
+	technicianId?: string;
 }

@@ -7,12 +7,12 @@ import {
 } from "../../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/appError";
+import { notificationService } from "../notification/notification.service";
 import type {
 	IAssignmentQuery,
 	ICreateAssignmentPayload,
 	IUpdateAssignmentStatusPayload,
 } from "./assignments.interface";
-import { notificationService } from "../notification/notification.service";
 
 const assignmentInclude = {
 	complaint: {
@@ -232,6 +232,13 @@ const getAssignments = async (
 			httpStatus.FORBIDDEN,
 			"You are not authorized to view assignments",
 		);
+	}
+
+	if (
+		(role === Role.ADMIN || role === Role.DEPARTMENT_OFFICER) &&
+		query.technicianId
+	) {
+		where.technicianId = query.technicianId;
 	}
 
 	const [assignments, total] = await Promise.all([

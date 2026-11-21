@@ -84,6 +84,24 @@ const getPayments = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const getDepartmentPayments = catchAsync(
+	async (req: Request, res: Response) => {
+		const user = getAuthenticatedUser(req);
+		const result = await paymentsService.getDepartmentPayments(
+			user.userId,
+			PaymentsValidation.paymentQuerySchema.parse(req.query),
+		);
+
+		sendResponse(res, {
+			statusCode: httpStatus.OK,
+			success: true,
+			message: "Department payments retrieved successfully",
+			data: result.data,
+			meta: result.meta,
+		});
+	},
+);
+
 const getPaymentStats = catchAsync(async (req: Request, res: Response) => {
 	const result = await paymentsService.getPaymentStats(
 		PaymentsValidation.paymentStatsQuerySchema.parse(req.query),
@@ -118,6 +136,7 @@ export const PaymentsController = {
 	handleBkashCallback,
 	getMyPayments,
 	getPayments,
+	getDepartmentPayments,
 	getPaymentStats,
 	getPaymentById,
 };

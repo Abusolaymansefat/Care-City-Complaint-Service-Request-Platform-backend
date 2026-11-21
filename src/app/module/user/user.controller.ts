@@ -19,6 +19,46 @@ const getUsers = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const getDepartmentOfficerId = (req: Request) => {
+	const officerId = req.user?.userId;
+	if (!officerId) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "You must be logged in");
+	}
+	return officerId;
+};
+
+const getDepartmentTechnicians = catchAsync(
+	async (req: Request, res: Response) => {
+		const result = await UserService.getDepartmentTechnicians(
+			getDepartmentOfficerId(req),
+			UserValidation.departmentTechniciansQuerySchema.parse(req.query),
+		);
+		sendResponse(res, {
+			statusCode: httpStatus.OK,
+			success: true,
+			message: "Department technicians retrieved successfully",
+			data: result.data,
+			meta: result.meta,
+		});
+	},
+);
+
+const getDepartmentTechnician = catchAsync(
+	async (req: Request, res: Response) => {
+		const { id } = UserValidation.userIdParamSchema.parse(req.params);
+		const result = await UserService.getDepartmentTechnician(
+			getDepartmentOfficerId(req),
+			id,
+		);
+		sendResponse(res, {
+			statusCode: httpStatus.OK,
+			success: true,
+			message: "Department technician retrieved successfully",
+			data: result,
+		});
+	},
+);
+
 const updateUser = catchAsync(async (req: Request, res: Response) => {
 	const params = UserValidation.userIdParamSchema.parse(req.params);
 	const adminId = req.user?.userId;
@@ -56,6 +96,8 @@ const uploadProfileImage = catchAsync(async (req: Request, res: Response) => {
 
 export const UserController = {
 	getUsers,
+	getDepartmentTechnicians,
+	getDepartmentTechnician,
 	updateUser,
 	uploadProfileImage,
 };

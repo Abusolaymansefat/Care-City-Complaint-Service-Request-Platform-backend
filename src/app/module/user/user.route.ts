@@ -15,6 +15,20 @@ router.get(
 	UserController.getUsers,
 );
 
+router.get(
+	"/get-department-technicians",
+	auth(Role.DEPARTMENT_OFFICER),
+	validateRequest(UserValidation.departmentTechniciansQuerySchema, "query"),
+	UserController.getDepartmentTechnicians,
+);
+
+router.get(
+	"/get-department-technicians/:id",
+	auth(Role.DEPARTMENT_OFFICER),
+	validateRequest(UserValidation.userIdParamSchema, "params"),
+	UserController.getDepartmentTechnician,
+);
+
 router.patch(
 	"/update-user/:id",
 	auth(Role.ADMIN),

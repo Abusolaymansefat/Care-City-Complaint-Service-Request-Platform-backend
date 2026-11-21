@@ -27,6 +27,107 @@ const userSelect = {
 	},
 } satisfies Prisma.UserSelect;
 
+const departmentTechnicianSelect = {
+	id: true,
+	name: true,
+	email: true,
+	status: true,
+	departmentId: true,
+	department: {
+		select: {
+			id: true,
+			name: true,
+		},
+	},
+} satisfies Prisma.UserSelect;
+
+const getDepartmentIdForOfficer = async (officerId: string) => {
+	const officer = await prisma.user.findFirst({
+		where: {
+			id: officerId,
+			role: Role.DEPARTMENT_OFFICER,
+			status: UserStatus.ACTIVE,
+			isDeleted: false,
+		},
+		select: { departmentId: true },
+	});
+
+	if (!officer?.departmentId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Your account is not assigned to a department",
+		);
+	}
+
+	return officer.departmentId;
+};
+
+const getDepartmentTechnicians = async (
+	officerId: string,
+	query: Pick<IUserQuery, "searchTerm" | "page" | "limit">,
+) => {
+	const departmentId = await getDepartmentIdForOfficer(officerId);
+	const page = query.page ?? 1;
+	const limit = query.limit ?? 10;
+	const skip = (page - 1) * limit;
+	const where: Prisma.UserWhereInput = {
+		isDeleted: false,
+		departmentId,
+		role: Role.TECHNICIAN,
+		status: UserStatus.ACTIVE,
+		...(query.searchTerm && {
+			OR: [
+				{ name: { contains: query.searchTerm, mode: "insensitive" } },
+				{ email: { contains: query.searchTerm, mode: "insensitive" } },
+			],
+		}),
+	};
+
+	const [technicians, total] = await Promise.all([
+		prisma.user.findMany({
+			where,
+			skip,
+			take: limit,
+			orderBy: { createdAt: "desc" },
+			select: departmentTechnicianSelect,
+		}),
+		prisma.user.count({ where }),
+	]);
+
+	return {
+		data: technicians,
+		meta: {
+			page,
+			limit,
+			total,
+			totalPages: Math.ceil(total / limit),
+		},
+	};
+};
+
+const getDepartmentTechnician = async (
+	officerId: string,
+	technicianId: string,
+) => {
+	const departmentId = await getDepartmentIdForOfficer(officerId);
+	const technician = await prisma.user.findFirst({
+		where: {
+			id: technicianId,
+			departmentId,
+			role: Role.TECHNICIAN,
+			status: UserStatus.ACTIVE,
+			isDeleted: false,
+		},
+		select: departmentTechnicianSelect,
+	});
+
+	if (!technician) {
+		throw new AppError(httpStatus.NOT_FOUND, "Technician not found");
+	}
+
+	return technician;
+};
+
 const getUsers = async (query: IUserQuery) => {
 	const page = query.page ?? 1;
 	const limit = query.limit ?? 10;
@@ -256,6 +357,8 @@ const uploadProfileImage = async (buffer: Buffer, userId: string) => {
 
 export const UserService = {
 	getUsers,
+	getDepartmentTechnicians,
+	getDepartmentTechnician,
 	updateUser,
 	uploadProfileImage,
 };
