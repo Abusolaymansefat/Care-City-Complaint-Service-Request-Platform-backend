@@ -129,12 +129,15 @@ BKASH_USERNAME="YOUR_BKASH_USERNAME"
 BKASH_PASSWORD="YOUR_BKASH_PASSWORD"
 BKASH_APP_KEY="YOUR_BKASH_APP_KEY"
 BKASH_APP_SECRET="YOUR_BKASH_APP_SECRET"
-BKASH_CALLBACK_URL="YOUR_CONFIGURED_CALLBACK_URL"
+BKASH_CALLBACK_URL="https://your-public-backend.example.com/api/v1/payments/bkash-callback"
 
 COMPLAINT_FEE_AMOUNT="YOUR_CONFIGURED_FEE"
 ```
 
 Use the exact environment variable names expected by your configuration module. Never commit `.env`, credentials, access tokens, or payment secrets to GitHub.
+Set `BKASH_CALLBACK_URL` to the exact public HTTPS callback URL registered
+with the bKash merchant account. The backend callback route is
+`/api/v1/payments/bkash-callback`; localhost is not reachable by bKash.
 
 ### 4. Generate Prisma Client
 

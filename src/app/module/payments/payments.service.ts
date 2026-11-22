@@ -129,6 +129,35 @@ const createBkashPayment = async (payload: {
 	invoiceNumber: string;
 	payerReference: string;
 }) => {
+	const configuredCallbackURL = config.bkash_callback_url?.trim();
+	if (!configuredCallbackURL) {
+		throw new AppError(
+			httpStatus.INTERNAL_SERVER_ERROR,
+			"BKASH_CALLBACK_URL must be set to the public callback URL approved by bKash",
+		);
+	}
+
+	let callbackURL: URL;
+	try {
+		callbackURL = new URL(configuredCallbackURL);
+	} catch {
+		throw new AppError(
+			httpStatus.INTERNAL_SERVER_ERROR,
+			"BKASH_CALLBACK_URL must be an absolute URL",
+		);
+	}
+
+	const hostname = callbackURL.hostname.replace(/^\[|\]$/g, "");
+	if (
+		["localhost", "127.0.0.1", "::1"].includes(hostname) ||
+		callbackURL.protocol !== "https:"
+	) {
+		throw new AppError(
+			httpStatus.INTERNAL_SERVER_ERROR,
+			"BKASH_CALLBACK_URL must be publicly reachable over HTTPS and approved by the bKash merchant",
+		);
+	}
+
 	const response = await fetch(
 		`${config.bkash_base_url}/tokenized/checkout/create`,
 		{
@@ -137,7 +166,7 @@ const createBkashPayment = async (payload: {
 			body: JSON.stringify({
 				mode: "0011",
 				payerReference: payload.payerReference,
-				callbackURL: config.bkash_callback_url,
+				callbackURL: callbackURL.toString(),
 				amount: payload.amount.toFixed(2),
 				currency: "BDT",
 				intent: "sale",
@@ -149,10 +178,16 @@ const createBkashPayment = async (payload: {
 	const result = (await response.json()) as IBkashCreateResponse;
 
 	if (!response.ok || result.statusCode !== "0000" || !result.paymentID) {
-		throw new AppError(
-			httpStatus.BAD_REQUEST,
-			result.statusMessage ?? "Failed to create bKash payment",
-		);
+		const statusMessage =
+			result.statusMessage ?? "Failed to create bKash payment";
+		if (/invalid.*callback|callback.*invalid/i.test(statusMessage)) {
+			throw new AppError(
+				httpStatus.BAD_REQUEST,
+				"bKash rejected BKASH_CALLBACK_URL. Set it to the exact public HTTPS callback URL approved in the merchant account, then redeploy the backend.",
+			);
+		}
+
+		throw new AppError(httpStatus.BAD_REQUEST, statusMessage);
 	}
 
 	return result;
@@ -226,7 +261,7 @@ const initiatePayment = async (userId: string, complaintId: string) => {
 
 	const timing =
 		complaint.status === ComplaintStatus.RESOLVED ||
-		complaint.status === ComplaintStatus.CLOSED
+			complaint.status === ComplaintStatus.CLOSED
 			? PaymentTiming.AFTER_COMPLETION
 			: PaymentTiming.AFTER_SUBMISSION;
 
